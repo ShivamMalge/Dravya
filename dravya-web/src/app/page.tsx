@@ -40,7 +40,8 @@ export default function Home() {
     const executeWasmSort = useCallback(async () => {
         setIsSorting(true);
         try {
-            const wasmModule = await import(/* webpackIgnore: true */ '../../dravya-core/pkg/dravya_core.js');
+            const modulePath = ['..', '..', 'dravya-core', 'pkg', 'dravya_core.js'].join('/');
+            const wasmModule = await (new Function('p', 'return import(p)'))(modulePath) as { default: () => Promise<void>; sort_colors: (a: Uint8Array) => void };
             if (!isEngineReady) {
                 await wasmModule.default();
                 setIsEngineReady(true);
