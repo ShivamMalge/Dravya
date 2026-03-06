@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "dravya-core"
+]
+resolver = "2"
