@@ -2,11 +2,12 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { runJsBenchmark, runWasmBenchmark, BenchmarkResult } from '../utils/benchmark';
 
 const Visualizer = dynamic(() => import('../components/Visualizer'), { ssr: false });
 const TreeVisualizer = dynamic(() => import('../components/TreeVisualizer'), { ssr: false });
 
-type DashboardMode = 'sort' | 'binomial';
+type DashboardMode = 'sort' | 'binomial' | 'diagnostics';
 
 interface BinomialResult {
     asset_prices: number[][];
@@ -111,6 +112,11 @@ export default function Home() {
     const [treeSteps, setTreeSteps] = useState(4);
     const [binomialResult, setBinomialResult] = useState<BinomialResult | null>(null);
 
+    const [stressArraySize, setStressArraySize] = useState(100000);
+    const [isRunningBenchmark, setIsRunningBenchmark] = useState(false);
+    const [jsBenchmarkResult, setJsBenchmarkResult] = useState<BenchmarkResult | null>(null);
+    const [wasmBenchmarkResult, setWasmBenchmarkResult] = useState<BenchmarkResult | null>(null);
+
     const currentData = stepHistory[currentStep] || stepHistory[0];
 
     const stopPlayback = useCallback(() => {
@@ -199,6 +205,21 @@ export default function Home() {
         }
     }, [spotPrice, strikePrice, timeToExpiry, riskFreeRate, volatilityParam, treeSteps]);
 
+    const runStressTest = useCallback(async () => {
+        setIsRunningBenchmark(true);
+        setJsBenchmarkResult(null);
+        setWasmBenchmarkResult(null);
+
+        await new Promise(r => setTimeout(r, 50));
+        const jsResult = await runJsBenchmark(stressArraySize, 3, 5);
+        setJsBenchmarkResult(jsResult);
+
+        const wasmResult = await runWasmBenchmark(stressArraySize, 3, 5);
+        setWasmBenchmarkResult(wasmResult);
+
+        setIsRunningBenchmark(false);
+    }, [stressArraySize]);
+
     const hasHistory = stepHistory.length > 1;
 
     return (
@@ -217,6 +238,12 @@ export default function Home() {
                     style={modeTabStyle(activeMode === 'binomial')}
                 >
                     Binomial Tree
+                </button>
+                <button
+                    onClick={() => setActiveMode('diagnostics')}
+                    style={modeTabStyle(activeMode === 'diagnostics')}
+                >
+                    Diagnostics
                 </button>
             </div>
 
@@ -273,6 +300,63 @@ export default function Home() {
                     )}
                 </div>
             )}
+
+            {activeMode === 'diagnostics' && (
+                <div>
+                    <div style={{ marginBottom: '1rem' }}>
+                        <label style={{ fontSize: '0.85rem', fontWeight: 600, marginRight: '0.5rem' }}>
+                            Array Size (N): {stressArraySize.toLocaleString()}
+                        </label>
+                        <input type="range" min={1000} max={5000000} step={10000} value={stressArraySize}
+                            onChange={(e) => setStressArraySize(Number(e.target.value))}
+                            style={{ width: '300px', verticalAlign: 'middle' }} />
+                    </div>
+                    <button onClick={runStressTest} disabled={isRunningBenchmark} style={btnStyle('#8b5cf6', isRunningBenchmark)}>
+                        {isRunningBenchmark ? 'Running Benchmark...' : 'Run Stress Test'}
+                    </button>
+                    {(jsBenchmarkResult || wasmBenchmarkResult) && (
+                        <div style={{ marginTop: '1.5rem' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'monospace', fontSize: '0.85rem' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '2px solid #334155' }}>
+                                        <th style={thStyle}>Metric</th>
+                                        <th style={thStyle}>JavaScript</th>
+                                        <th style={thStyle}>WASM (Rust)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr style={trStyle}>
+                                        <td style={tdStyle}>Execution Time</td>
+                                        <td style={tdStyle}>{jsBenchmarkResult ? `${jsBenchmarkResult.medianExecutionMs} ms` : '—'}</td>
+                                        <td style={tdStyle}>{wasmBenchmarkResult ? `${wasmBenchmarkResult.medianExecutionMs} ms` : 'N/A'}</td>
+                                    </tr>
+                                    <tr style={trStyle}>
+                                        <td style={tdStyle}>Throughput</td>
+                                        <td style={tdStyle}>{jsBenchmarkResult ? formatThroughput(jsBenchmarkResult.throughputElementsPerSec) : '—'}</td>
+                                        <td style={tdStyle}>{wasmBenchmarkResult ? formatThroughput(wasmBenchmarkResult.throughputElementsPerSec) : 'N/A'}</td>
+                                    </tr>
+                                    <tr style={trStyle}>
+                                        <td style={tdStyle}>Heap Pressure</td>
+                                        <td style={tdStyle}>{jsBenchmarkResult?.heapUsedBytes !== null ? formatBytes(jsBenchmarkResult!.heapUsedBytes!) : 'N/A'}</td>
+                                        <td style={tdStyle}>{wasmBenchmarkResult?.heapUsedBytes !== null ? formatBytes(wasmBenchmarkResult!.heapUsedBytes!) : 'N/A'}</td>
+                                    </tr>
+                                    {jsBenchmarkResult && wasmBenchmarkResult && (
+                                        <tr style={{ ...trStyle, backgroundColor: '#1e293b' }}>
+                                            <td style={{ ...tdStyle, fontWeight: 700, color: '#10b981' }}>Speedup</td>
+                                            <td style={tdStyle}>baseline</td>
+                                            <td style={{ ...tdStyle, fontWeight: 700, color: '#10b981' }}>
+                                                {wasmBenchmarkResult.medianExecutionMs > 0
+                                                    ? `${(jsBenchmarkResult.medianExecutionMs / wasmBenchmarkResult.medianExecutionMs).toFixed(2)}x`
+                                                    : '—'}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            )}
         </main>
     );
 }
@@ -318,3 +402,37 @@ function btnStyle(bg: string, disabled = false): React.CSSProperties {
         opacity: disabled ? 0.5 : 1,
     };
 }
+
+const thStyle: React.CSSProperties = {
+    padding: '0.6rem 0.75rem',
+    textAlign: 'left',
+    color: '#94a3b8',
+    fontSize: '0.8rem',
+    fontWeight: 700,
+    textTransform: 'uppercase',
+    letterSpacing: '0.05em',
+};
+
+const trStyle: React.CSSProperties = {
+    borderBottom: '1px solid #1e293b',
+};
+
+const tdStyle: React.CSSProperties = {
+    padding: '0.6rem 0.75rem',
+    color: '#e2e8f0',
+};
+
+function formatThroughput(elementsPerSec: number): string {
+    if (elementsPerSec >= 1_000_000_000) return `${(elementsPerSec / 1_000_000_000).toFixed(2)}B/sec`;
+    if (elementsPerSec >= 1_000_000) return `${(elementsPerSec / 1_000_000).toFixed(2)}M/sec`;
+    if (elementsPerSec >= 1_000) return `${(elementsPerSec / 1_000).toFixed(1)}K/sec`;
+    return `${elementsPerSec}/sec`;
+}
+
+function formatBytes(bytes: number): string {
+    if (bytes < 0) return `−${formatBytes(Math.abs(bytes))}`;
+    if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(2)} MB`;
+    if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${bytes} B`;
+}
+
