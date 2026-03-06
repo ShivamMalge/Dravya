@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { Box, OrbitControls } from '@react-three/drei';
-import anime from 'animejs';
+import * as animejs from 'animejs';
+const anime = (animejs as any).default || animejs;
 import * as THREE from 'three';
 
 const COLOR_MAP: Record<number, string> = {
