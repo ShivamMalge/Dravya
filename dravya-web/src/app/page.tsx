@@ -20,7 +20,7 @@ export default function Home() {
     const executeWasmSort = useCallback(async () => {
         setIsSorting(true);
         try {
-            const wasmModule = await import('../../dravya-core/pkg/dravya_core');
+            const wasmModule = await import('dravya-core');
             if (!isEngineReady) {
                 await wasmModule.default();
                 setIsEngineReady(true);

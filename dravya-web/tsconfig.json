@@ -24,6 +24,9 @@
         "paths": {
             "@/*": [
                 "./src/*"
+            ],
+            "dravya-core": [
+                "../dravya-core/pkg/dravya_core"
             ]
         }
     },
