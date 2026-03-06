@@ -1,8 +1,8 @@
-import React, { useEffect, useRef } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { Box, OrbitControls, Stats } from '@react-three/drei';
-import * as animejs from 'animejs';
-const anime = (animejs as any).default || animejs;
+'use client';
+
+import React, { useEffect, useRef, useMemo } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import { OrbitControls, Stats } from '@react-three/drei';
 import * as THREE from 'three';
 
 const COLOR_MAP: Record<number, string> = {
@@ -11,46 +11,94 @@ const COLOR_MAP: Record<number, string> = {
     2: '#3b82f6',
 };
 
-const ArrayMeshes = ({ data }: { data: number[] }) => {
-    const groupRef = useRef<THREE.Group>(null);
+const ANIMATION_DURATION = 750;
+
+function AnimatedBox({ value, targetX, index }: { value: number; targetX: number; index: number }) {
+    const meshRef = useRef<THREE.Mesh>(null);
+    const materialRef = useRef<THREE.MeshStandardMaterial>(null);
+    const startTime = useRef<number | null>(null);
+    const startX = useRef<number>(targetX);
+    const startY = useRef<number>(3);
+    const currentTargetX = useRef<number>(targetX);
 
     useEffect(() => {
-        if (groupRef.current) {
-            anime({
-                targets: groupRef.current.children,
-                translateY: [2, 0],
-                opacity: [0, 1],
-                delay: anime.stagger(100),
-                duration: 800,
-                easing: 'easeOutElastic(1, .8)',
-            });
+        if (meshRef.current) {
+            startX.current = meshRef.current.position.x;
+            startY.current = meshRef.current.position.y;
+            currentTargetX.current = targetX;
+            startTime.current = performance.now();
         }
+    }, [targetX, value]);
+
+    useFrame(() => {
+        if (!meshRef.current || startTime.current === null) return;
+
+        const elapsed = performance.now() - startTime.current;
+        const progress = Math.min(elapsed / ANIMATION_DURATION, 1);
+
+        const eased = progress < 0.5
+            ? Math.pow(2, 20 * progress - 10) / 2
+            : (2 - Math.pow(2, -20 * progress + 10)) / 2;
+
+        meshRef.current.position.x = startX.current + (currentTargetX.current - startX.current) * eased;
+        meshRef.current.position.y = startY.current + (0 - startY.current) * eased;
+
+        const scale = 1 + Math.sin(progress * Math.PI) * 0.15;
+        meshRef.current.scale.set(scale, scale, scale);
+
+        if (progress >= 1) {
+            startTime.current = null;
+            meshRef.current.position.x = currentTargetX.current;
+            meshRef.current.position.y = 0;
+            meshRef.current.scale.set(1, 1, 1);
+        }
+    });
+
+    return (
+        <mesh ref={meshRef} position={[targetX, 3, 0]}>
+            <boxGeometry args={[0.9, 0.9, 0.9]} />
+            <meshStandardMaterial
+                ref={materialRef}
+                color={COLOR_MAP[value]}
+                metalness={0.3}
+                roughness={0.4}
+            />
+        </mesh>
+    );
+}
+
+function ArrayMeshes({ data }: { data: number[] }) {
+    const meshPositionMap = useMemo(() => {
+        const offset = (data.length - 1) / 2;
+        return data.map((_, i) => (i - offset) * 1.2);
     }, [data]);
 
     return (
-        <group ref={groupRef}>
+        <group>
             {data.map((val, i) => (
-                <Box
-                    key={`${i}-${val}`}
-                    position={[(i - data.length / 2) * 1.2, 0, 0]}
-                    args={[1, 1, 1]}
-                >
-                    <meshStandardMaterial color={COLOR_MAP[val]} />
-                </Box>
+                <AnimatedBox
+                    key={`box-${i}`}
+                    value={val}
+                    targetX={meshPositionMap[i]}
+                    index={i}
+                />
             ))}
         </group>
     );
-};
+}
 
 export default function Visualizer({ data }: { data: number[] }) {
     return (
-        <div style={{ width: '100%', height: '400px' }}>
-            <Canvas camera={{ position: [0, 5, 10], fov: 50 }}>
+        <div style={{ width: '100%', height: '450px', borderRadius: '8px', overflow: 'hidden' }}>
+            <Canvas camera={{ position: [0, 4, 8], fov: 50 }}>
                 <Stats />
-                <ambientLight intensity={0.5} />
-                <pointLight position={[10, 10, 10]} intensity={1} />
+                <color attach="background" args={['#1a1a2e']} />
+                <ambientLight intensity={0.4} />
+                <pointLight position={[10, 10, 10]} intensity={1.2} />
+                <pointLight position={[-10, -5, -10]} intensity={0.3} color="#3b82f6" />
                 <ArrayMeshes data={data} />
-                <OrbitControls />
+                <OrbitControls enablePan={false} />
+                <gridHelper args={[20, 20, '#333355', '#222244']} />
             </Canvas>
         </div>
     );

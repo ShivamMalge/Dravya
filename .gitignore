@@ -3,5 +3,6 @@ node_modules/
 dist/
 .env
 .DS_Store
-dravya-core/target/
+target/
 dravya-core/pkg/
+Cargo.lock
