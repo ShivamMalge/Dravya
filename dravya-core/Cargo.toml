@@ -2,6 +2,11 @@
 name = "dravya-core"
 version = "0.1.0"
 edition = "2021"
+description = "High-performance algorithmic visualization engine with WebAssembly support"
+repository = "https://github.com/ShivamMalge/Dravya"
+license = "MIT"
+keywords = ["wasm", "algorithms", "visualization", "sorting", "webassembly"]
+categories = ["algorithms", "wasm", "visualization"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
