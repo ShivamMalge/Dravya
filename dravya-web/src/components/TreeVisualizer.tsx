@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Stats, Line, Text } from '@react-three/drei';
+import { OrbitControls, Stats, Line, Html } from '@react-three/drei';
 
 interface TreeVisualizerProps {
     assetPrices: number[][];
@@ -17,15 +17,18 @@ function TreeNode({ position, color, label }: { position: [number, number, numbe
                 <sphereGeometry args={[0.15, 16, 16]} />
                 <meshStandardMaterial color={color} metalness={0.4} roughness={0.3} />
             </mesh>
-            <Text
-                position={[0, 0.3, 0]}
-                fontSize={0.12}
-                color="#e2e8f0"
-                anchorX="center"
-                anchorY="bottom"
-            >
-                {label}
-            </Text>
+            <Html center distanceFactor={15} style={{ pointerEvents: 'none' }}>
+                <div style={{
+                    color: '#e2e8f0',
+                    fontSize: '10px',
+                    fontFamily: 'monospace',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                    transform: 'translateY(-18px)',
+                }}>
+                    {label}
+                </div>
+            </Html>
         </group>
     );
 }
@@ -68,36 +71,19 @@ function TreeStructure({ assetPrices, optionValues }: { assetPrices: number[][];
 
                 const priceLabel = assetPrices[step][node].toFixed(1);
 
-                nodeElements.push({
-                    position,
-                    color: nodeColor,
-                    label: priceLabel,
-                    key: `node-${step}-${node}`,
-                });
+                nodeElements.push({ position, color: nodeColor, label: priceLabel, key: `node-${step}-${node}` });
 
                 if (step < totalSteps - 1) {
                     const nextLevelNodes = assetPrices[step + 1].length;
                     const nextXPos = (step + 1) * xSpacing - (totalSteps - 1) * xSpacing / 2;
 
-                    const upNode = node;
-                    const downNode = node + 1;
-
-                    if (upNode < nextLevelNodes) {
-                        const upYPos = (nextLevelNodes - 1) / 2 * ySpacing - upNode * ySpacing;
-                        edgeElements.push({
-                            start: position,
-                            end: [nextXPos, upYPos, 0],
-                            key: `edge-${step}-${node}-up`,
-                        });
+                    if (node < nextLevelNodes) {
+                        const upYPos = (nextLevelNodes - 1) / 2 * ySpacing - node * ySpacing;
+                        edgeElements.push({ start: position, end: [nextXPos, upYPos, 0], key: `edge-${step}-${node}-up` });
                     }
-
-                    if (downNode < nextLevelNodes) {
-                        const downYPos = (nextLevelNodes - 1) / 2 * ySpacing - downNode * ySpacing;
-                        edgeElements.push({
-                            start: position,
-                            end: [nextXPos, downYPos, 0],
-                            key: `edge-${step}-${node}-down`,
-                        });
+                    if (node + 1 < nextLevelNodes) {
+                        const downYPos = (nextLevelNodes - 1) / 2 * ySpacing - (node + 1) * ySpacing;
+                        edgeElements.push({ start: position, end: [nextXPos, downYPos, 0], key: `edge-${step}-${node}-down` });
                     }
                 }
             }
