@@ -1,0 +1,5 @@
+{
+    "framework": "nextjs",
+    "buildCommand": "cd ../.. && pnpm run build --filter dravya-web",
+    "installCommand": "cd ../.. && pnpm install"
+}
