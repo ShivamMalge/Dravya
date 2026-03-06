@@ -30,6 +30,44 @@ pub fn sort_colors(colors: &mut [u8]) {
     }
 }
 
+#[wasm_bindgen]
+pub fn sort_colors_with_history(colors: &[u8]) -> JsValue {
+    let mut state = colors.to_vec();
+    let mut step_history: Vec<Vec<u8>> = Vec::new();
+    step_history.push(state.clone());
+
+    let mut low = 0;
+    let mut current = 0;
+    let mut high = state.len().saturating_sub(1);
+
+    while current <= high {
+        match state[current] {
+            0 => {
+                state.swap(low, current);
+                step_history.push(state.clone());
+                low += 1;
+                current += 1;
+            }
+            1 => {
+                current += 1;
+            }
+            2 => {
+                state.swap(current, high);
+                step_history.push(state.clone());
+                if high == 0 {
+                    break;
+                }
+                high -= 1;
+            }
+            _ => {
+                current += 1;
+            }
+        }
+    }
+
+    serde_wasm_bindgen::to_value(&step_history).unwrap_or(JsValue::NULL)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
