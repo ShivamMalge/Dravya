@@ -7,7 +7,7 @@ import pool from './db';
 
 dotenv.config();
 
-const app = express();
+export const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
@@ -39,8 +39,8 @@ passport.deserializeUser(async (id: string, done) => {
 });
 
 passport.use(new GitHubStrategy({
-    clientID: process.env.GITHUB_CLIENT_ID as string,
-    clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+    clientID: process.env.GITHUB_CLIENT_ID || 'mock',
+    clientSecret: process.env.GITHUB_CLIENT_SECRET || 'mock',
     callbackURL: process.env.GITHUB_CALLBACK_URL || 'http://localhost:3000/auth/github/callback'
 }, async (accessToken: string, refreshToken: string, profile: any, done: any) => {
     try {
@@ -82,6 +82,8 @@ app.get('/', (req, res) => {
     res.send('Dravya Server');
 });
 
-app.listen(port, () => {
-    console.log(`Listening on ${port}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+    app.listen(port, () => {
+        console.log(`Listening on ${port}`);
+    });
+}

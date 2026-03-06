@@ -29,3 +29,29 @@ pub fn sort_colors(colors: &mut [u8]) {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sort_colors_standard() {
+        let mut arr = vec![2, 0, 2, 1, 1, 0];
+        sort_colors(&mut arr);
+        assert_eq!(arr, vec![0, 0, 1, 1, 2, 2]);
+    }
+
+    #[test]
+    fn test_sort_colors_empty() {
+        let mut arr: Vec<u8> = vec![];
+        sort_colors(&mut arr);
+        assert_eq!(arr, vec![]);
+    }
+
+    #[test]
+    fn test_sort_colors_single() {
+        let mut arr = vec![1];
+        sort_colors(&mut arr);
+        assert_eq!(arr, vec![1]);
+    }
+}

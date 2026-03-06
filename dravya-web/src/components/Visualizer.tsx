@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { Box, OrbitControls } from '@react-three/drei';
+import { Box, OrbitControls, Stats } from '@react-three/drei';
 import * as animejs from 'animejs';
 const anime = (animejs as any).default || animejs;
 import * as THREE from 'three';
@@ -46,6 +46,7 @@ export default function Visualizer({ data }: { data: number[] }) {
     return (
         <div style={{ width: '100%', height: '400px' }}>
             <Canvas camera={{ position: [0, 5, 10], fov: 50 }}>
+                <Stats />
                 <ambientLight intensity={0.5} />
                 <pointLight position={[10, 10, 10]} intensity={1} />
                 <ArrayMeshes data={data} />
