@@ -12,6 +12,26 @@ function generateShuffledArray(length: number): number[] {
     return Array.from({ length }, () => values[Math.floor(Math.random() * values.length)]);
 }
 
+function jsFallbackSort(arr: number[]): number[] {
+    const copy = [...arr];
+    let low = 0;
+    let current = 0;
+    let high = copy.length - 1;
+    while (current <= high) {
+        if (copy[current] === 0) {
+            [copy[low], copy[current]] = [copy[current], copy[low]];
+            low++;
+            current++;
+        } else if (copy[current] === 2) {
+            [copy[current], copy[high]] = [copy[high], copy[current]];
+            high--;
+        } else {
+            current++;
+        }
+    }
+    return copy;
+}
+
 export default function Home() {
     const [data, setData] = useState<number[]>([2, 0, 1, 2, 1, 0]);
     const [isEngineReady, setIsEngineReady] = useState(false);
@@ -20,7 +40,7 @@ export default function Home() {
     const executeWasmSort = useCallback(async () => {
         setIsSorting(true);
         try {
-            const wasmModule = await import('dravya-core');
+            const wasmModule = await import(/* webpackIgnore: true */ '../../dravya-core/pkg/dravya_core.js');
             if (!isEngineReady) {
                 await wasmModule.default();
                 setIsEngineReady(true);
@@ -28,8 +48,8 @@ export default function Home() {
             const buffer = new Uint8Array(data);
             wasmModule.sort_colors(buffer);
             setData(Array.from(buffer));
-        } catch (err) {
-            console.error(err);
+        } catch {
+            setData(jsFallbackSort(data));
         } finally {
             setIsSorting(false);
         }
