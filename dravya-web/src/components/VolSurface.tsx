@@ -4,6 +4,7 @@ import React, { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
+import Axes3D from './Axes3D';
 
 interface VolSurfaceProps {
     impliedVolGrid: number[];
@@ -38,7 +39,7 @@ function SurfaceMesh({ impliedVolGrid, strikeAxis, timeAxis, gridRows, gridCols 
                 const idx = row * gridCols + col;
                 const xPos = col * xScale - 4.0;
                 const zPos = row * zScale - 4.0;
-                const yPos = ((impliedVolGrid[idx] - minIV) / ivRange) * 4.0;
+                const yPos = ((impliedVolGrid[idx] - minIV) / ivRange) * 4.0 - 2.0;
 
                 vertices.push(xPos, yPos, zPos);
 
@@ -110,14 +111,23 @@ export default function VolSurface({ impliedVolGrid, strikeAxis, timeAxis, gridR
                     <ambientLight intensity={0.4} />
                     <directionalLight position={[5, 10, 5]} intensity={0.8} />
                     <pointLight position={[-5, 3, -5]} intensity={0.3} color="#60a5fa" />
-                    <SurfaceMesh
-                        impliedVolGrid={impliedVolGrid}
-                        strikeAxis={strikeAxis}
-                        timeAxis={timeAxis}
-                        gridRows={gridRows}
-                        gridCols={gridCols}
-                    />
-                    <gridHelper args={[10, 10, '#1e293b', '#1e293b']} position={[0, -0.1, 0]} />
+                    <Axes3D
+                        xLabel="Strike"
+                        yLabel="Implied Volatility (%)"
+                        zLabel="Time (Years)"
+                        xDomain={[Math.min(...strikeAxis), Math.max(...strikeAxis)]}
+                        yDomain={[minIV * 100, maxIV * 100]}
+                        zDomain={[Math.min(...timeAxis), Math.max(...timeAxis)]}
+                        scaleVector={[8.0, 4.0, 8.0]}
+                    >
+                        <SurfaceMesh
+                            impliedVolGrid={impliedVolGrid}
+                            strikeAxis={strikeAxis}
+                            timeAxis={timeAxis}
+                            gridRows={gridRows}
+                            gridCols={gridCols}
+                        />
+                    </Axes3D>
                     <OrbitControls enablePan={true} enableDamping={true} dampingFactor={0.08} />
                 </Canvas>
             </div>

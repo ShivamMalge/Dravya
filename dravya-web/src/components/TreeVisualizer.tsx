@@ -3,6 +3,7 @@
 import React, { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Line, Html } from '@react-three/drei';
+import Axes3D from './Axes3D';
 
 interface TreeVisualizerProps {
     assetPrices: number[][];
@@ -59,9 +60,27 @@ function LatticeStructure({ assetPrices, optionValues, strikePrice }: {
     optionValues: number[][];
     strikePrice: number;
 }) {
-    const { nodes, edges } = useMemo(() => {
+    const { nodes, edges, bounds } = useMemo(() => {
         const nodeElements: { position: [number, number, number]; color: string; priceLabel: string; optionLabel: string; key: string }[] = [];
         const edgeElements: { start: [number, number, number]; end: [number, number, number]; key: string }[] = [];
+
+        let minAsset = Infinity;
+        let maxAsset = -Infinity;
+        let maxOption = -Infinity;
+
+        for (const level of assetPrices) {
+            for (const val of level) {
+                if (val < minAsset) minAsset = val;
+                if (val > maxAsset) maxAsset = val;
+            }
+        }
+        for (const level of optionValues) {
+            for (const val of level) {
+                if (val > maxOption) maxOption = val;
+            }
+        }
+        const minOption = 0;
+        const optionRange = maxOption - minOption || 1;
 
         const xSpacing = 2.2;
         const ySpacing = 1.3;
@@ -72,10 +91,12 @@ function LatticeStructure({ assetPrices, optionValues, strikePrice }: {
             for (let node = 0; node < levelNodeCount; node++) {
                 const xPos = step * xSpacing - (totalSteps - 1) * xSpacing / 2;
                 const yPos = (levelNodeCount - 1) / 2 * ySpacing - node * ySpacing;
-                const position: [number, number, number] = [xPos, yPos, 0];
-
                 const assetPrice = assetPrices[step][node];
                 const optionVal = optionValues[step]?.[node] ?? 0;
+
+                const zSpacing = 6.0;
+                const zPos = ((optionVal - minOption) / optionRange) * zSpacing - zSpacing / 2;
+                const position: [number, number, number] = [xPos, yPos, zPos];
 
                 const isInTheMoney = assetPrice > strikePrice;
                 const moneyness = Math.abs(assetPrice - strikePrice) / strikePrice;
@@ -108,27 +129,49 @@ function LatticeStructure({ assetPrices, optionValues, strikePrice }: {
 
                     if (node < nextLevelCount) {
                         const upYPos = (nextLevelCount - 1) / 2 * ySpacing - node * ySpacing;
-                        edgeElements.push({ start: position, end: [nextXPos, upYPos, 0], key: `edge-${step}-${node}-up` });
+                        const nextUpOption = optionValues[step + 1]?.[node] ?? 0;
+                        const upZPos = ((nextUpOption - minOption) / optionRange) * zSpacing - zSpacing / 2;
+                        edgeElements.push({ start: position, end: [nextXPos, upYPos, upZPos], key: `edge-${step}-${node}-up` });
                     }
                     if (node + 1 < nextLevelCount) {
                         const downYPos = (nextLevelCount - 1) / 2 * ySpacing - (node + 1) * ySpacing;
-                        edgeElements.push({ start: position, end: [nextXPos, downYPos, 0], key: `edge-${step}-${node}-down` });
+                        const nextDownOption = optionValues[step + 1]?.[node + 1] ?? 0;
+                        const downZPos = ((nextDownOption - minOption) / optionRange) * zSpacing - zSpacing / 2;
+                        edgeElements.push({ start: position, end: [nextXPos, downYPos, downZPos], key: `edge-${step}-${node}-down` });
                     }
                 }
             }
         }
 
-        return { nodes: nodeElements, edges: edgeElements };
+        const xLength = (totalSteps - 1) * xSpacing || 1;
+        const yLength = (totalSteps - 1) * ySpacing || 1;
+        const zLength = 6.0;
+
+        return {
+            nodes: nodeElements,
+            edges: edgeElements,
+            bounds: { minAsset, maxAsset, minOption, maxOption, xLength, yLength, zLength, totalSteps }
+        };
     }, [assetPrices, optionValues, strikePrice]);
 
     return (
         <group>
-            {edges.map(({ start, end, key }) => (
-                <TreeEdge key={key} start={start} end={end} />
-            ))}
-            {nodes.map(({ position, color, priceLabel, optionLabel, key }) => (
-                <TreeNode key={key} position={position} color={color} priceLabel={priceLabel} optionLabel={optionLabel} />
-            ))}
+            <Axes3D
+                xLabel="Time Steps"
+                yLabel="Asset Price"
+                zLabel="Option Value"
+                xDomain={[0, bounds.totalSteps - 1]}
+                yDomain={[bounds.minAsset, bounds.maxAsset]}
+                zDomain={[bounds.minOption, bounds.maxOption]}
+                scaleVector={[bounds.xLength, bounds.yLength, bounds.zLength]}
+            >
+                {edges.map(({ start, end, key }) => (
+                    <TreeEdge key={key} start={start} end={end} />
+                ))}
+                {nodes.map(({ position, color, priceLabel, optionLabel, key }) => (
+                    <TreeNode key={key} position={position} color={color} priceLabel={priceLabel} optionLabel={optionLabel} />
+                ))}
+            </Axes3D>
         </group>
     );
 }
@@ -155,7 +198,7 @@ export default function TreeVisualizer({ assetPrices, optionValues, finalPrice, 
                 </span>
             </div>
             <div style={{ width: '100%', height: '480px', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
-                <Canvas camera={{ position: [0, 0, 14], fov: 50 }}>
+                <Canvas camera={{ position: [20, 10, 20], fov: 50 }}>
                     <color attach="background" args={['#020617']} />
                     <ambientLight intensity={0.4} />
                     <pointLight position={[10, 10, 10]} intensity={1.2} />
