@@ -406,7 +406,7 @@ function btnStyle(bg: string, disabled = false): React.CSSProperties {
 const thStyle: React.CSSProperties = {
     padding: '0.6rem 0.75rem',
     textAlign: 'left',
-    color: '#94a3b8',
+    color: '#1e293b',
     fontSize: '0.8rem',
     fontWeight: 700,
     textTransform: 'uppercase',
@@ -419,7 +419,7 @@ const trStyle: React.CSSProperties = {
 
 const tdStyle: React.CSSProperties = {
     padding: '0.6rem 0.75rem',
-    color: '#e2e8f0',
+    color: '#334155',
 };
 
 function formatThroughput(elementsPerSec: number): string {
