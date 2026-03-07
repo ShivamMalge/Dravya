@@ -280,6 +280,164 @@ pub fn calculate_binomial_tree(
     serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
 }
 
+fn standard_normal_cdf(x: f64) -> f64 {
+    let a1 = 0.254829592;
+    let a2 = -0.284496736;
+    let a3 = 1.421413741;
+    let a4 = -1.453152027;
+    let a5 = 1.061405429;
+    let p = 0.3275911;
+    let sign = if x < 0.0 { -1.0 } else { 1.0 };
+    let abs_x = x.abs() / core::f64::consts::SQRT_2;
+    let t = 1.0 / (1.0 + p * abs_x);
+    let y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * (-abs_x * abs_x).exp();
+    0.5 * (1.0 + sign * y)
+}
+
+fn standard_normal_pdf(x: f64) -> f64 {
+    (-0.5 * x * x).exp() / (2.0 * core::f64::consts::PI).sqrt()
+}
+
+fn bs_call_price(spot: f64, strike: f64, time: f64, rate: f64, vol: f64) -> f64 {
+    if time <= 0.0 || vol <= 0.0 {
+        return (spot - strike).max(0.0);
+    }
+    let d1 = ((spot / strike).ln() + (rate + 0.5 * vol * vol) * time) / (vol * time.sqrt());
+    let d2 = d1 - vol * time.sqrt();
+    spot * standard_normal_cdf(d1) - strike * (-rate * time).exp() * standard_normal_cdf(d2)
+}
+
+fn bs_vega(spot: f64, strike: f64, time: f64, rate: f64, vol: f64) -> f64 {
+    if time <= 0.0 || vol <= 0.0 {
+        return 0.0;
+    }
+    let d1 = ((spot / strike).ln() + (rate + 0.5 * vol * vol) * time) / (vol * time.sqrt());
+    spot * standard_normal_pdf(d1) * time.sqrt()
+}
+
+fn newton_raphson_iv(
+    market_price: f64,
+    spot: f64,
+    strike: f64,
+    time: f64,
+    rate: f64,
+) -> f64 {
+    let newton_tolerance = 1e-5;
+    let max_iterations = 100;
+    let mut implied_vol = 0.3;
+
+    for _ in 0..max_iterations {
+        let model_price = bs_call_price(spot, strike, time, rate, implied_vol);
+        let vega_value = bs_vega(spot, strike, time, rate, implied_vol);
+
+        if vega_value.abs() < 1e-12 {
+            break;
+        }
+
+        let price_error = model_price - market_price;
+        implied_vol -= price_error / vega_value;
+
+        if implied_vol < 0.001 {
+            implied_vol = 0.001;
+        }
+        if implied_vol > 5.0 {
+            implied_vol = 5.0;
+        }
+
+        if price_error.abs() < newton_tolerance {
+            break;
+        }
+    }
+
+    (implied_vol * 1e6).round() / 1e6
+}
+
+#[derive(Serialize, Clone)]
+pub struct VolSurfaceResult {
+    pub implied_vol_grid: Vec<f64>,
+    pub strike_axis: Vec<f64>,
+    pub time_axis: Vec<f64>,
+    pub grid_rows: usize,
+    pub grid_cols: usize,
+}
+
+fn generate_vol_surface_data(
+    spot: f64,
+    rate: f64,
+    base_vol: f64,
+    strike_points: usize,
+    time_points: usize,
+) -> VolSurfaceResult {
+    let strike_low = spot * 0.8;
+    let strike_high = spot * 1.2;
+    let time_low = 0.1;
+    let time_high = 2.0;
+
+    let mut strike_axis: Vec<f64> = Vec::with_capacity(strike_points);
+    for i in 0..strike_points {
+        let fraction = i as f64 / (strike_points - 1).max(1) as f64;
+        let strike_val = strike_low + fraction * (strike_high - strike_low);
+        strike_axis.push((strike_val * 100.0).round() / 100.0);
+    }
+
+    let mut time_axis: Vec<f64> = Vec::with_capacity(time_points);
+    for j in 0..time_points {
+        let fraction = j as f64 / (time_points - 1).max(1) as f64;
+        let time_val = time_low + fraction * (time_high - time_low);
+        time_axis.push((time_val * 1000.0).round() / 1000.0);
+    }
+
+    let mut implied_vol_grid: Vec<f64> = Vec::with_capacity(strike_points * time_points);
+
+    for j in 0..time_points {
+        let time_val = time_axis[j];
+        for i in 0..strike_points {
+            let strike_val = strike_axis[i];
+
+            let moneyness = (strike_val / spot).ln();
+            let skew_bump = 0.1 * moneyness * moneyness;
+            let term_bump = 0.02 / time_val.sqrt();
+            let synthetic_vol = base_vol + skew_bump + term_bump;
+
+            let synthetic_market_price = bs_call_price(spot, strike_val, time_val, rate, synthetic_vol);
+            let solved_iv = newton_raphson_iv(synthetic_market_price, spot, strike_val, time_val, rate);
+
+            implied_vol_grid.push(solved_iv);
+        }
+    }
+
+    VolSurfaceResult {
+        implied_vol_grid,
+        strike_axis,
+        time_axis,
+        grid_rows: time_points,
+        grid_cols: strike_points,
+    }
+}
+
+#[wasm_bindgen]
+pub fn calculate_implied_volatility(
+    market_price: f64,
+    spot: f64,
+    strike: f64,
+    time: f64,
+    rate: f64,
+) -> f64 {
+    newton_raphson_iv(market_price, spot, strike, time, rate)
+}
+
+#[wasm_bindgen]
+pub fn generate_vol_surface(
+    spot: f64,
+    rate: f64,
+    base_vol: f64,
+    strike_points: usize,
+    time_points: usize,
+) -> JsValue {
+    let result = generate_vol_surface_data(spot, rate, base_vol, strike_points, time_points);
+    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

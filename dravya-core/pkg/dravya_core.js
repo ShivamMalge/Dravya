@@ -66,6 +66,32 @@ export function calculate_binomial_tree(spot_price, strike_price, time_to_expiry
 }
 
 /**
+ * @param {number} market_price
+ * @param {number} spot
+ * @param {number} strike
+ * @param {number} time
+ * @param {number} rate
+ * @returns {number}
+ */
+export function calculate_implied_volatility(market_price, spot, strike, time, rate) {
+    const ret = wasm.calculate_implied_volatility(market_price, spot, strike, time, rate);
+    return ret;
+}
+
+/**
+ * @param {number} spot
+ * @param {number} rate
+ * @param {number} base_vol
+ * @param {number} strike_points
+ * @param {number} time_points
+ * @returns {any}
+ */
+export function generate_vol_surface(spot, rate, base_vol, strike_points, time_points) {
+    const ret = wasm.generate_vol_surface(spot, rate, base_vol, strike_points, time_points);
+    return ret;
+}
+
+/**
  * @returns {number}
  */
 export function get_wasm_memory_size() {
@@ -96,6 +122,10 @@ export function sort_colors_with_history(colors) {
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,
+        __wbg_Error_83742b46f01ce22d: function(arg0, arg1) {
+            const ret = Error(getStringFromWasm0(arg0, arg1));
+            return ret;
+        },
         __wbg_String_8564e559799eccda: function(arg0, arg1) {
             const ret = String(arg1);
             const ptr1 = passStringToWasm0(ret, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
@@ -145,6 +175,11 @@ function __wbg_get_imports() {
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
             // Cast intrinsic for `Ref(String) -> Externref`.
             const ret = getStringFromWasm0(arg0, arg1);
+            return ret;
+        },
+        __wbindgen_cast_0000000000000003: function(arg0) {
+            // Cast intrinsic for `U64 -> Externref`.
+            const ret = BigInt.asUintN(64, arg0);
             return ret;
         },
         __wbindgen_init_externref_table: function() {

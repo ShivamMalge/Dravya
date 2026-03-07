@@ -7,8 +7,17 @@ import { runJsBenchmark, runWasmBenchmark, BenchmarkResult } from '../utils/benc
 const Visualizer = dynamic(() => import('../components/Visualizer'), { ssr: false });
 const TreeVisualizer = dynamic(() => import('../components/TreeVisualizer'), { ssr: false });
 const RiskDashboard = dynamic(() => import('../components/RiskDashboard'), { ssr: false });
+const VolSurface = dynamic(() => import('../components/VolSurface'), { ssr: false });
 
-type DashboardMode = 'sort' | 'binomial' | 'diagnostics';
+type DashboardMode = 'sort' | 'binomial' | 'volsurface' | 'diagnostics';
+
+interface VolSurfaceResult {
+    implied_vol_grid: number[];
+    strike_axis: number[];
+    time_axis: number[];
+    grid_rows: number;
+    grid_cols: number;
+}
 
 interface GreeksData {
     delta: number;
@@ -136,6 +145,83 @@ function jsFallbackBinomialTree(
     };
 }
 
+function jsStandardNormalCdf(x: number): number {
+    const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429;
+    const p = 0.3275911;
+    const sign = x < 0 ? -1 : 1;
+    const absX = Math.abs(x) / Math.SQRT2;
+    const t = 1.0 / (1.0 + p * absX);
+    const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-absX * absX);
+    return 0.5 * (1.0 + sign * y);
+}
+
+function jsStandardNormalPdf(x: number): number {
+    return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
+}
+
+function jsBsCallPrice(spot: number, strike: number, time: number, rate: number, vol: number): number {
+    if (time <= 0 || vol <= 0) return Math.max(spot - strike, 0);
+    const d1 = (Math.log(spot / strike) + (rate + 0.5 * vol * vol) * time) / (vol * Math.sqrt(time));
+    const d2 = d1 - vol * Math.sqrt(time);
+    return spot * jsStandardNormalCdf(d1) - strike * Math.exp(-rate * time) * jsStandardNormalCdf(d2);
+}
+
+function jsBsVega(spot: number, strike: number, time: number, rate: number, vol: number): number {
+    if (time <= 0 || vol <= 0) return 0;
+    const d1 = (Math.log(spot / strike) + (rate + 0.5 * vol * vol) * time) / (vol * Math.sqrt(time));
+    return spot * jsStandardNormalPdf(d1) * Math.sqrt(time);
+}
+
+function jsNewtonRaphsonIV(marketPrice: number, spot: number, strike: number, time: number, rate: number): number {
+    const newtonTolerance = 1e-5;
+    let impliedVol = 0.3;
+    for (let iter = 0; iter < 100; iter++) {
+        const modelPrice = jsBsCallPrice(spot, strike, time, rate, impliedVol);
+        const vegaValue = jsBsVega(spot, strike, time, rate, impliedVol);
+        if (Math.abs(vegaValue) < 1e-12) break;
+        const priceError = modelPrice - marketPrice;
+        impliedVol -= priceError / vegaValue;
+        impliedVol = Math.max(0.001, Math.min(5.0, impliedVol));
+        if (Math.abs(priceError) < newtonTolerance) break;
+    }
+    return Math.round(impliedVol * 1e6) / 1e6;
+}
+
+function jsFallbackVolSurface(spot: number, rate: number, baseVol: number, gridResolution: number): VolSurfaceResult {
+    const strikeLow = spot * 0.8;
+    const strikeHigh = spot * 1.2;
+    const timeLow = 0.1;
+    const timeHigh = 2.0;
+
+    const strikeAxis: number[] = [];
+    for (let i = 0; i < gridResolution; i++) {
+        const fraction = i / Math.max(gridResolution - 1, 1);
+        strikeAxis.push(Math.round((strikeLow + fraction * (strikeHigh - strikeLow)) * 100) / 100);
+    }
+
+    const timeAxis: number[] = [];
+    for (let j = 0; j < gridResolution; j++) {
+        const fraction = j / Math.max(gridResolution - 1, 1);
+        timeAxis.push(Math.round((timeLow + fraction * (timeHigh - timeLow)) * 1000) / 1000);
+    }
+
+    const impliedVolGrid: number[] = [];
+    for (let j = 0; j < gridResolution; j++) {
+        const timeVal = timeAxis[j];
+        for (let i = 0; i < gridResolution; i++) {
+            const strikeVal = strikeAxis[i];
+            const moneyness = Math.log(strikeVal / spot);
+            const skewBump = 0.1 * moneyness * moneyness;
+            const termBump = 0.02 / Math.sqrt(timeVal);
+            const syntheticVol = baseVol + skewBump + termBump;
+            const syntheticPrice = jsBsCallPrice(spot, strikeVal, timeVal, rate, syntheticVol);
+            impliedVolGrid.push(jsNewtonRaphsonIV(syntheticPrice, spot, strikeVal, timeVal, rate));
+        }
+    }
+
+    return { implied_vol_grid: impliedVolGrid, strike_axis: strikeAxis, time_axis: timeAxis, grid_rows: gridResolution, grid_cols: gridResolution };
+}
+
 export default function Home() {
     const [activeMode, setActiveMode] = useState<DashboardMode>('sort');
 
@@ -152,6 +238,12 @@ export default function Home() {
     const [volatilityParam, setVolatilityParam] = useState(0.2);
     const [treeSteps, setTreeSteps] = useState(4);
     const [binomialResult, setBinomialResult] = useState<BinomialResult | null>(null);
+
+    const [surfaceSpotPrice, setSurfaceSpotPrice] = useState(100);
+    const [surfaceRiskFreeRate, setSurfaceRiskFreeRate] = useState(0.05);
+    const [surfaceBaseVol, setSurfaceBaseVol] = useState(0.25);
+    const [surfaceGridResolution, setSurfaceGridResolution] = useState(15);
+    const [volSurfaceResult, setVolSurfaceResult] = useState<VolSurfaceResult | null>(null);
 
     const [stressArraySize, setStressArraySize] = useState(100000);
     const [isRunningBenchmark, setIsRunningBenchmark] = useState(false);
@@ -252,6 +344,28 @@ export default function Home() {
         }
     }, [activeMode, executeBinomialTree]);
 
+    const executeVolSurface = useCallback(async () => {
+        try {
+            const modulePath = '/wasm/dravya_core.js';
+            const wasmModule = await (new Function('p', 'return import(p)'))(modulePath) as {
+                default: () => Promise<void>;
+                generate_vol_surface: (spot: number, rate: number, baseVol: number, strikePts: number, timePts: number) => VolSurfaceResult;
+            };
+            await wasmModule.default();
+            const result = wasmModule.generate_vol_surface(surfaceSpotPrice, surfaceRiskFreeRate, surfaceBaseVol, surfaceGridResolution, surfaceGridResolution);
+            setVolSurfaceResult(result);
+        } catch {
+            const result = jsFallbackVolSurface(surfaceSpotPrice, surfaceRiskFreeRate, surfaceBaseVol, surfaceGridResolution);
+            setVolSurfaceResult(result);
+        }
+    }, [surfaceSpotPrice, surfaceRiskFreeRate, surfaceBaseVol, surfaceGridResolution]);
+
+    useEffect(() => {
+        if (activeMode === 'volsurface') {
+            executeVolSurface();
+        }
+    }, [activeMode, executeVolSurface]);
+
     const runStressTest = useCallback(async () => {
         setIsRunningBenchmark(true);
         setJsBenchmarkResult(null);
@@ -285,6 +399,12 @@ export default function Home() {
                     style={modeTabStyle(activeMode === 'binomial')}
                 >
                     Binomial Tree
+                </button>
+                <button
+                    onClick={() => setActiveMode('volsurface')}
+                    style={modeTabStyle(activeMode === 'volsurface')}
+                >
+                    Vol Surface
                 </button>
                 <button
                     onClick={() => setActiveMode('diagnostics')}
@@ -357,6 +477,40 @@ export default function Home() {
                         ) : (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '480px', backgroundColor: '#f1f5f9', borderRadius: '8px', color: '#94a3b8', fontFamily: 'monospace' }}>
                                 Drag a slider to generate the lattice...
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {activeMode === 'volsurface' && (
+                <div style={{ display: 'flex', gap: '1.5rem' }}>
+                    <div style={{
+                        width: '240px',
+                        flexShrink: 0,
+                        padding: '1rem',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                    }}>
+                        <h3 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: '#0f172a' }}>Surface Parameters</h3>
+                        <SliderParam label="Spot Price" value={surfaceSpotPrice} min={50} max={300} step={5} onChange={setSurfaceSpotPrice} />
+                        <SliderParam label="Risk-Free Rate" value={surfaceRiskFreeRate} min={0.01} max={0.15} step={0.01} onChange={setSurfaceRiskFreeRate} />
+                        <SliderParam label="Base Volatility" value={surfaceBaseVol} min={0.1} max={0.8} step={0.05} onChange={setSurfaceBaseVol} />
+                        <SliderParam label="Grid Resolution" value={surfaceGridResolution} min={8} max={25} step={1} onChange={setSurfaceGridResolution} />
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        {volSurfaceResult ? (
+                            <VolSurface
+                                impliedVolGrid={volSurfaceResult.implied_vol_grid}
+                                strikeAxis={volSurfaceResult.strike_axis}
+                                timeAxis={volSurfaceResult.time_axis}
+                                gridRows={volSurfaceResult.grid_rows}
+                                gridCols={volSurfaceResult.grid_cols}
+                            />
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '500px', backgroundColor: '#f1f5f9', borderRadius: '8px', color: '#94a3b8', fontFamily: 'monospace' }}>
+                                Generating volatility surface...
                             </div>
                         )}
                     </div>

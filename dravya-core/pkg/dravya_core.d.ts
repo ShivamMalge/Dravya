@@ -12,6 +12,10 @@ export class DravyaEngine {
 
 export function calculate_binomial_tree(spot_price: number, strike_price: number, time_to_expiry: number, risk_free_rate: number, volatility: number, steps: number): any;
 
+export function calculate_implied_volatility(market_price: number, spot: number, strike: number, time: number, rate: number): number;
+
+export function generate_vol_surface(spot: number, rate: number, base_vol: number, strike_points: number, time_points: number): any;
+
 export function get_wasm_memory_size(): number;
 
 export function sort_colors(colors: Uint8Array): void;
@@ -24,10 +28,12 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_dravyaengine_free: (a: number, b: number) => void;
     readonly calculate_binomial_tree: (a: number, b: number, c: number, d: number, e: number, f: number) => any;
+    readonly calculate_implied_volatility: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly dravyaengine_new: () => number;
     readonly dravyaengine_sort_colors: (a: number, b: number, c: number, d: any) => [number, number];
     readonly dravyaengine_sort_colors_with_history: (a: number, b: number, c: number) => [number, number, number];
     readonly dravyaengine_step_count: (a: number) => number;
+    readonly generate_vol_surface: (a: number, b: number, c: number, d: number, e: number) => any;
     readonly get_wasm_memory_size: () => number;
     readonly sort_colors: (a: number, b: number, c: any) => void;
     readonly sort_colors_with_history: (a: number, b: number) => any;
