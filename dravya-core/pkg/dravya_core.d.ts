@@ -74,6 +74,13 @@ export function calculate_implied_volatility(market_price: number, spot: number,
 
 export function deterministicSeedLog(seed: number): void;
 
+export class fixSimdScanner {
+    free(): void;
+    [Symbol.dispose](): void;
+    constructor();
+    tagValueMap(payload: Uint8Array): number;
+}
+
 export function generate_sabr_surface(spot: number, rate: number, alpha: number, beta: number, rho: number, nu: number, strike_points: number, time_points: number): any;
 
 export function generate_vol_surface(spot: number, rate: number, base_vol: number, strike_points: number, time_points: number): any;
@@ -166,11 +173,14 @@ export interface InitOutput {
     readonly livetelemetry_new: () => number;
     readonly livetelemetry_packets_per_second: (a: number) => number;
     readonly livetelemetry_track_packet: (a: number, b: number) => void;
-    readonly rayonWorkerPool: (a: number, b: number) => number;
     readonly sharedArrayLockFree: (a: number, b: number, c: any, d: number) => void;
     readonly wsmarketstream_new: (a: number, b: number) => [number, number, number];
     readonly wsmarketstream_send_binary: (a: number, b: number, c: number) => [number, number];
     readonly wsmarketstream_subscribe: (a: number, b: number, c: number) => [number, number];
+    readonly rayonWorkerPool: (a: number, b: number) => number;
+    readonly __wbg_fixsimdscanner_free: (a: number, b: number) => void;
+    readonly fixsimdscanner_new: () => number;
+    readonly fixsimdscanner_tagValueMap: (a: number, b: number, c: number) => number;
     readonly __wbg_arrowmemorypointer_free: (a: number, b: number) => void;
     readonly __wbg_get_arrowmemorypointer_array_ptr: (a: number) => number;
     readonly __wbg_get_arrowmemorypointer_data_ptr: (a: number) => number;
