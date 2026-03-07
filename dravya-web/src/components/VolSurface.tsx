@@ -72,9 +72,27 @@ function SurfaceMesh({ impliedVolGrid, strikeAxis, timeAxis, gridRows, gridCols 
     }, [impliedVolGrid, gridRows, gridCols]);
 
     return (
-        <mesh key={geometryKey} geometry={geometry}>
-            <meshStandardMaterial vertexColors side={THREE.DoubleSide} metalness={0.3} roughness={0.5} />
-        </mesh>
+        <group>
+            <mesh key={`solid-${geometryKey}`} geometry={geometry} receiveShadow castShadow>
+                <meshPhysicalMaterial
+                    vertexColors
+                    side={THREE.DoubleSide}
+                    metalness={0.6}
+                    roughness={0.2}
+                    clearcoat={0.8}
+                    clearcoatRoughness={0.2}
+                />
+            </mesh>
+            <mesh key={`wire-${geometryKey}`} geometry={geometry}>
+                <meshBasicMaterial
+                    color="#38bdf8"
+                    wireframe
+                    transparent
+                    opacity={0.15}
+                    depthWrite={false}
+                />
+            </mesh>
+        </group>
     );
 }
 
@@ -106,11 +124,11 @@ export default function VolSurface({ impliedVolGrid, strikeAxis, timeAxis, gridR
                 </span>
             </div>
             <div style={{ width: '100%', height: '500px', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
-                <Canvas camera={{ position: [6, 5, 8], fov: 50 }}>
+                <Canvas camera={{ position: [6, 5, 8], fov: 50 }} shadows>
                     <color attach="background" args={['#020617']} />
-                    <ambientLight intensity={0.4} />
-                    <directionalLight position={[5, 10, 5]} intensity={0.8} />
-                    <pointLight position={[-5, 3, -5]} intensity={0.3} color="#60a5fa" />
+                    <ambientLight intensity={0.6} />
+                    <directionalLight position={[5, 10, 5]} intensity={1.2} castShadow shadow-mapSize={[1024, 1024]} />
+                    <pointLight position={[-5, 3, -5]} intensity={0.5} color="#60a5fa" />
                     <Axes3D
                         xLabel="Strike"
                         yLabel="Implied Volatility (%)"
