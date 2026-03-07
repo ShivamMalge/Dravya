@@ -336,12 +336,27 @@ export default function Home() {
                                         <td style={tdStyle}>{wasmBenchmarkResult ? formatThroughput(wasmBenchmarkResult.throughputElementsPerSec) : 'N/A'}</td>
                                     </tr>
                                     <tr style={trStyle}>
-                                        <td style={tdStyle}>Heap Pressure</td>
-                                        <td style={tdStyle}>{jsBenchmarkResult && jsBenchmarkResult.heapUsedBytes != null ? formatBytes(jsBenchmarkResult.heapUsedBytes) : 'N/A'}</td>
-                                        <td style={tdStyle}>{wasmBenchmarkResult && wasmBenchmarkResult.heapUsedBytes != null ? formatBytes(wasmBenchmarkResult.heapUsedBytes) : 'N/A'}</td>
+                                        <td style={tdStyle}>Heap Delta</td>
+                                        <td style={tdStyle}>{jsBenchmarkResult && jsBenchmarkResult.heapDeltaBytes != null ? formatBytes(jsBenchmarkResult.heapDeltaBytes) : 'N/A'}</td>
+                                        <td style={tdStyle}>{wasmBenchmarkResult && wasmBenchmarkResult.heapDeltaBytes != null ? formatBytes(wasmBenchmarkResult.heapDeltaBytes) : 'N/A'}</td>
+                                    </tr>
+                                    <tr style={trStyle}>
+                                        <td style={tdStyle}>Garbage Produced</td>
+                                        <td style={tdStyle}>{jsBenchmarkResult && jsBenchmarkResult.garbageProducedBytes != null ? formatBytes(jsBenchmarkResult.garbageProducedBytes) : 'N/A'}</td>
+                                        <td style={tdStyle}>{wasmBenchmarkResult && wasmBenchmarkResult.garbageProducedBytes != null ? formatBytes(wasmBenchmarkResult.garbageProducedBytes) : 'N/A'}</td>
+                                    </tr>
+                                    <tr style={trStyle}>
+                                        <td style={tdStyle}>WASM Linear Memory</td>
+                                        <td style={tdStyle}>—</td>
+                                        <td style={tdStyle}>{wasmBenchmarkResult && wasmBenchmarkResult.wasmBufferByteLength != null ? formatBytes(wasmBenchmarkResult.wasmBufferByteLength) : 'N/A'}</td>
+                                    </tr>
+                                    <tr style={trStyle}>
+                                        <td style={tdStyle}>GC Impact</td>
+                                        <td style={tdStyle}>{jsBenchmarkResult && jsBenchmarkResult.gcImpactEstimateMs != null ? `${jsBenchmarkResult.gcImpactEstimateMs} ms` : 'N/A'}</td>
+                                        <td style={tdStyle}>{wasmBenchmarkResult && wasmBenchmarkResult.gcImpactEstimateMs != null ? `${wasmBenchmarkResult.gcImpactEstimateMs} ms` : 'N/A'}</td>
                                     </tr>
                                     {jsBenchmarkResult && wasmBenchmarkResult && (
-                                        <tr style={{ ...trStyle, backgroundColor: '#1e293b' }}>
+                                        <tr style={{ ...trStyle, backgroundColor: '#f0fdf4' }}>
                                             <td style={{ ...tdStyle, fontWeight: 700, color: '#10b981' }}>Speedup</td>
                                             <td style={tdStyle}>baseline</td>
                                             <td style={{ ...tdStyle, fontWeight: 700, color: '#10b981' }}>

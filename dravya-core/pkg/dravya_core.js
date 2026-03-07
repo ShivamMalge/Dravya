@@ -66,6 +66,14 @@ export function calculate_binomial_tree(spot_price, strike_price, time_to_expiry
 }
 
 /**
+ * @returns {number}
+ */
+export function get_wasm_memory_size() {
+    const ret = wasm.get_wasm_memory_size();
+    return ret >>> 0;
+}
+
+/**
  * @param {Uint8Array} colors
  */
 export function sort_colors(colors) {
@@ -98,9 +106,23 @@ function __wbg_get_imports() {
         __wbg___wbindgen_copy_to_typed_array_d2f20acdab8e0740: function(arg0, arg1, arg2) {
             new Uint8Array(arg2.buffer, arg2.byteOffset, arg2.byteLength).set(getArrayU8FromWasm0(arg0, arg1));
         },
+        __wbg___wbindgen_memory_edb3f01e3930bbf6: function() {
+            const ret = wasm.memory;
+            return ret;
+        },
+        __wbg___wbindgen_number_get_34bb9d9dcfa21373: function(arg0, arg1) {
+            const obj = arg1;
+            const ret = typeof(obj) === 'number' ? obj : undefined;
+            getDataViewMemory0().setFloat64(arg0 + 8 * 1, isLikeNone(ret) ? 0 : ret, true);
+            getDataViewMemory0().setInt32(arg0 + 4 * 0, !isLikeNone(ret), true);
+        },
         __wbg___wbindgen_throw_6ddd609b62940d55: function(arg0, arg1) {
             throw new Error(getStringFromWasm0(arg0, arg1));
         },
+        __wbg_get_3ef1eba1850ade27: function() { return handleError(function (arg0, arg1) {
+            const ret = Reflect.get(arg0, arg1);
+            return ret;
+        }, arguments); },
         __wbg_new_a70fbab9066b301f: function() {
             const ret = new Array();
             return ret;
@@ -145,6 +167,12 @@ const DravyaEngineFinalization = (typeof FinalizationRegistry === 'undefined')
     ? { register: () => {}, unregister: () => {} }
     : new FinalizationRegistry(ptr => wasm.__wbg_dravyaengine_free(ptr >>> 0, 1));
 
+function addToExternrefTable0(obj) {
+    const idx = wasm.__externref_table_alloc();
+    wasm.__wbindgen_externrefs.set(idx, obj);
+    return idx;
+}
+
 function getArrayU8FromWasm0(ptr, len) {
     ptr = ptr >>> 0;
     return getUint8ArrayMemory0().subarray(ptr / 1, ptr / 1 + len);
@@ -169,6 +197,19 @@ function getUint8ArrayMemory0() {
         cachedUint8ArrayMemory0 = new Uint8Array(wasm.memory.buffer);
     }
     return cachedUint8ArrayMemory0;
+}
+
+function handleError(f, args) {
+    try {
+        return f.apply(this, args);
+    } catch (e) {
+        const idx = addToExternrefTable0(e);
+        wasm.__wbindgen_exn_store(idx);
+    }
+}
+
+function isLikeNone(x) {
+    return x === undefined || x === null;
 }
 
 function passArray8ToWasm0(arg, malloc) {

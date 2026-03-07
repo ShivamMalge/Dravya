@@ -12,6 +12,8 @@ export class DravyaEngine {
 
 export function calculate_binomial_tree(spot_price: number, strike_price: number, time_to_expiry: number, risk_free_rate: number, volatility: number, steps: number): any;
 
+export function get_wasm_memory_size(): number;
+
 export function sort_colors(colors: Uint8Array): void;
 
 export function sort_colors_with_history(colors: Uint8Array): any;
@@ -26,10 +28,13 @@ export interface InitOutput {
     readonly dravyaengine_sort_colors: (a: number, b: number, c: number, d: any) => [number, number];
     readonly dravyaengine_sort_colors_with_history: (a: number, b: number, c: number) => [number, number, number];
     readonly dravyaengine_step_count: (a: number) => number;
+    readonly get_wasm_memory_size: () => number;
     readonly sort_colors: (a: number, b: number, c: any) => void;
     readonly sort_colors_with_history: (a: number, b: number) => any;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+    readonly __wbindgen_exn_store: (a: number) => void;
+    readonly __externref_table_alloc: () => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __externref_table_dealloc: (a: number) => void;
     readonly __wbindgen_start: () => void;

@@ -64,6 +64,14 @@ pub fn sort_colors_with_history(colors: &[u8]) -> JsValue {
     serde_wasm_bindgen::to_value(&history).unwrap_or(JsValue::NULL)
 }
 
+#[wasm_bindgen]
+pub fn get_wasm_memory_size() -> usize {
+    let memory = wasm_bindgen::memory();
+    let buffer = js_sys::Reflect::get(&memory, &JsValue::from_str("buffer")).unwrap_or(JsValue::NULL);
+    let byte_length = js_sys::Reflect::get(&buffer, &JsValue::from_str("byteLength")).unwrap_or(JsValue::from(0));
+    byte_length.as_f64().unwrap_or(0.0) as usize
+}
+
 fn dutch_national_flag_inplace(colors: &mut [u8]) {
     let mut low = 0;
     let mut current = 0;
