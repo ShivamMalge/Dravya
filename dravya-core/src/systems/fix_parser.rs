@@ -15,7 +15,7 @@ impl fixSimdScanner {
         }
     }
 
-    pub fn tagValueMap(&mut self, payload: &[u8]) -> usize {
+    pub fn tagValueMap(&mut self, payload: &[u8]) -> Result<usize, JsValue> {
         self.buffer.clear();
         self.buffer.extend_from_slice(payload);
 
@@ -37,6 +37,6 @@ impl fixSimdScanner {
             }
         }
         
-        count
+        Ok(count)
     }
 }

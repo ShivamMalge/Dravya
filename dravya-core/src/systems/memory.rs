@@ -33,33 +33,25 @@ impl tickRingBuffer {
         }
     }
 
-    pub fn insert_tick(&mut self, price: f64, volume: f64, timestamp: u64) {
-        // Spin lock for visual consistency
+    pub fn insert_tick(&mut self, price: f64, volume: f64, timestamp: u64) -> Result<(), JsValue> {
         while self.lock.compare_exchange(false, true, Ordering::Acquire, Ordering::Relaxed).is_err() {
-            // Wait for visualizer lock to release
         }
-        
-        // Zero-allocation steady state; directly write to the arena bypassing global allocator
         self.arena[self.write_index] = TickData {
             price,
             volume,
             timestamp,
         };
-        
         self.write_index = (self.write_index + 1) % self.capacity;
-        
-        // Release lock
         self.lock.store(false, Ordering::Release);
+        Ok(())
     }
 
     pub fn read_latest_ptr(&self) -> *const TickData {
         self.arena.as_ptr()
     }
 
-    pub fn arenaSteadyState(&self) -> bool {
-        // Returns true if the arena capacity has been instantiated completely
-        // and we are simply overwriting the circular buffer bounds without heap growth.
-        self.arena.capacity() == self.capacity
+    pub fn arenaSteadyState(&self) -> Result<bool, JsValue> {
+        Ok(self.arena.capacity() == self.capacity)
     }
     
     pub fn acquire_visualizer_lock(&self) -> bool {

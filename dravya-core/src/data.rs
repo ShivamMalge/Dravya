@@ -1,24 +1,5 @@
+use crate::error::DravyaError;
 use serde::{Deserialize, Serialize};
-use std::fmt;
-
-#[derive(Debug, Clone)]
-pub enum DravyaError {
-    InvalidCsvFormat { row_number: usize, detail: String },
-    EmptyCsvInput,
-    StabilityViolation(String),
-}
-
-impl fmt::Display for DravyaError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            DravyaError::InvalidCsvFormat { row_number, detail } => {
-                write!(f, "Invalid CSV at row {}: {}", row_number, detail)
-            }
-            DravyaError::EmptyCsvInput => write!(f, "Empty CSV input"),
-            DravyaError::StabilityViolation(msg) => write!(f, "Stability Violation: {}", msg),
-        }
-    }
-}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MarketDataRow {

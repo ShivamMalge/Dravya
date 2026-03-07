@@ -3,26 +3,16 @@ use wasm_bindgen::prelude::*;
 
 pub mod compute;
 pub mod data;
+pub mod error;
 pub mod models;
 pub mod systems;
 
-#[derive(Clone)]
-pub enum EngineError {
-    InvalidInput,
-}
+use crate::error::DravyaError;
 
-impl From<EngineError> for JsValue {
-    fn from(err: EngineError) -> JsValue {
-        match err {
-            EngineError::InvalidInput => JsValue::from_str("InvalidInput: array values must be 0, 1, or 2"),
-        }
-    }
-}
-
-fn validate_input(arr: &[u8]) -> Result<(), EngineError> {
+fn validate_input(arr: &[u8]) -> Result<(), DravyaError> {
     for val in arr {
         if *val > 2 {
-            return Err(EngineError::InvalidInput);
+            return Err(DravyaError::InvalidInput("array values must be 0, 1, or 2".to_string()));
         }
     }
     Ok(())
@@ -65,9 +55,9 @@ pub fn sort_colors(colors: &mut [u8]) {
 }
 
 #[wasm_bindgen]
-pub fn sort_colors_with_history(colors: &[u8]) -> JsValue {
+pub fn sort_colors_with_history(colors: &[u8]) -> Result<JsValue, JsValue> {
     let history = dutch_national_flag_history(colors);
-    serde_wasm_bindgen::to_value(&history).unwrap_or(JsValue::NULL)
+    serde_wasm_bindgen::to_value(&history).map_err(|e| JsValue::from(DravyaError::SerializationError(e.to_string())))
 }
 
 #[wasm_bindgen]
@@ -79,9 +69,12 @@ pub fn get_wasm_memory_size() -> usize {
 }
 
 fn dutch_national_flag_inplace(colors: &mut [u8]) {
+    if colors.is_empty() {
+        return;
+    }
     let mut low = 0;
     let mut current = 0;
-    let mut high = colors.len().saturating_sub(1);
+    let mut high = colors.len() - 1;
 
     while current <= high {
         match colors[current] {
@@ -108,13 +101,17 @@ fn dutch_national_flag_inplace(colors: &mut [u8]) {
 }
 
 fn dutch_national_flag_history(colors: &[u8]) -> Vec<Vec<u8>> {
-    let mut state = colors.to_vec();
     let mut step_history: Vec<Vec<u8>> = Vec::new();
+    if colors.is_empty() {
+        step_history.push(Vec::new());
+        return step_history;
+    }
+    let mut state = colors.to_vec();
     step_history.push(state.clone());
 
     let mut low = 0;
     let mut current = 0;
-    let mut high = state.len().saturating_sub(1);
+    let mut high = state.len() - 1;
 
     while current <= high {
         match state[current] {
@@ -287,11 +284,14 @@ pub fn calculate_binomial_tree(
     risk_free_rate: f64,
     volatility: f64,
     steps: usize,
-) -> JsValue {
+) -> Result<JsValue, JsValue> {
+    if spot_price <= 0.0 || strike_price <= 0.0 || time_to_expiry <= 0.0 || volatility <= 0.0 {
+        return Err(JsValue::from(DravyaError::InvalidInput("spot, strike, time, and volatility must be positive".to_string())));
+    }
     let result = binomial_tree_european_call(
         spot_price, strike_price, time_to_expiry, risk_free_rate, volatility, steps,
     );
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from(DravyaError::SerializationError(e.to_string())))
 }
 
 pub fn standard_normal_cdf(x: f64) -> f64 {
@@ -478,8 +478,11 @@ pub fn calculate_implied_volatility(
     strike: f64,
     time: f64,
     rate: f64,
-) -> f64 {
-    newton_raphson_iv(market_price, spot, strike, time, rate)
+) -> Result<f64, JsValue> {
+    if spot <= 0.0 || strike <= 0.0 || time <= 0.0 {
+        return Err(JsValue::from(DravyaError::InvalidInput("spot, strike, and time must be positive".to_string())));
+    }
+    Ok(newton_raphson_iv(market_price, spot, strike, time, rate))
 }
 
 #[wasm_bindgen]
@@ -489,9 +492,12 @@ pub fn generate_vol_surface(
     base_vol: f64,
     strike_points: usize,
     time_points: usize,
-) -> JsValue {
+) -> Result<JsValue, JsValue> {
+    if spot <= 0.0 || base_vol <= 0.0 {
+        return Err(JsValue::from(DravyaError::InvalidInput("spot and base volatility must be positive".to_string())));
+    }
     let result = generate_vol_surface_data(spot, rate, base_vol, strike_points, time_points);
-    serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+    serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from(DravyaError::SerializationError(e.to_string())))
 }
 
 #[wasm_bindgen]

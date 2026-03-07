@@ -1,3 +1,4 @@
+use crate::error::DravyaError;
 use serde::Serialize;
 use bytemuck::{Pod, Zeroable};
 use futures_channel::oneshot;
@@ -26,7 +27,7 @@ pub struct McParams {
 pub async fn dispatch_pricing_kernel(
     spot: f64, strike: f64, time: f64, rate: f64, vol: f64,
     num_paths: u32, steps: u32, seed: f64,
-) -> Result<MonteCarloResult, String> {
+) -> Result<MonteCarloResult, DravyaError> {
     let start_time = web_sys::window().unwrap().performance().unwrap().now();
     
     let instance = wgpu::Instance::default();
@@ -162,7 +163,7 @@ pub async fn dispatch_pricing_kernel(
     let (sender, receiver) = oneshot::channel();
     buffer_slice.map_async(wgpu::MapMode::Read, move |v| { sender.send(v).unwrap(); });
     
-    receiver.await.map_err(|_| "Failed to map buffer".to_string())?.map_err(|_| "Buffer Async Error".to_string())?;
+    receiver.await.map_err(|_| DravyaError::ComputeError("Failed to map buffer".to_string()))?.map_err(|_| DravyaError::ComputeError("Buffer Async Error".to_string()))?;
 
     let data = buffer_slice.get_mapped_range();
     let result_paths: &[f32] = bytemuck::cast_slice(&data);

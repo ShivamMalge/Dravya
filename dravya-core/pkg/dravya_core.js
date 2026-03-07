@@ -320,7 +320,10 @@ export function benchmark_simd_greeks(spot, strike, time, rate, vol, batch_size)
  */
 export function calculate_binomial_tree(spot_price, strike_price, time_to_expiry, risk_free_rate, volatility, steps) {
     const ret = wasm.calculate_binomial_tree(spot_price, strike_price, time_to_expiry, risk_free_rate, volatility, steps);
-    return ret;
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -333,7 +336,10 @@ export function calculate_binomial_tree(spot_price, strike_price, time_to_expiry
  */
 export function calculate_implied_volatility(market_price, spot, strike, time, rate) {
     const ret = wasm.calculate_implied_volatility(market_price, spot, strike, time, rate);
-    return ret;
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0];
 }
 
 /**
@@ -368,7 +374,10 @@ export class fixSimdScanner {
         const ptr0 = passArray8ToWasm0(payload, wasm.__wbindgen_malloc);
         const len0 = WASM_VECTOR_LEN;
         const ret = wasm.fixsimdscanner_tagValueMap(this.__wbg_ptr, ptr0, len0);
-        return ret >>> 0;
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] >>> 0;
     }
 }
 if (Symbol.dispose) fixSimdScanner.prototype[Symbol.dispose] = fixSimdScanner.prototype.free;
@@ -402,7 +411,10 @@ export function generate_sabr_surface(spot, rate, alpha, beta, rho, nu, strike_p
  */
 export function generate_vol_surface(spot, rate, base_vol, strike_points, time_points) {
     const ret = wasm.generate_vol_surface(spot, rate, base_vol, strike_points, time_points);
-    return ret;
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 /**
@@ -542,7 +554,10 @@ export function price_monte_carlo_gpu(spot, strike, time, rate, vol, num_paths, 
  */
 export function rayonWorkerPool(chunk_size, computations) {
     const ret = wasm.rayonWorkerPool(chunk_size, computations);
-    return ret;
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return ret[0];
 }
 
 /**
@@ -579,7 +594,10 @@ export function rkyvArchiveBuffer(spot, strikes, maturities, vol_surface, rates_
 export function sharedArrayLockFree(data, multiplier) {
     var ptr0 = passArrayF64ToWasm0(data, wasm.__wbindgen_malloc);
     var len0 = WASM_VECTOR_LEN;
-    wasm.sharedArrayLockFree(ptr0, len0, data, multiplier);
+    const ret = wasm.sharedArrayLockFree(ptr0, len0, data, multiplier);
+    if (ret[1]) {
+        throw takeFromExternrefTable0(ret[0]);
+    }
 }
 
 /**
@@ -599,7 +617,10 @@ export function sort_colors_with_history(colors) {
     const ptr0 = passArray8ToWasm0(colors, wasm.__wbindgen_malloc);
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.sort_colors_with_history(ptr0, len0);
-    return ret;
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
 }
 
 export class tickRingBuffer {
@@ -625,7 +646,10 @@ export class tickRingBuffer {
      */
     arenaSteadyState() {
         const ret = wasm.tickringbuffer_arenaSteadyState(this.__wbg_ptr);
-        return ret !== 0;
+        if (ret[2]) {
+            throw takeFromExternrefTable0(ret[1]);
+        }
+        return ret[0] !== 0;
     }
     /**
      * @param {number} price
@@ -633,7 +657,10 @@ export class tickRingBuffer {
      * @param {bigint} timestamp
      */
     insert_tick(price, volume, timestamp) {
-        wasm.tickringbuffer_insert_tick(this.__wbg_ptr, price, volume, timestamp);
+        const ret = wasm.tickringbuffer_insert_tick(this.__wbg_ptr, price, volume, timestamp);
+        if (ret[1]) {
+            throw takeFromExternrefTable0(ret[0]);
+        }
     }
     /**
      * @param {number} capacity
@@ -1674,7 +1701,7 @@ function __wbg_get_imports() {
             arg0.writeTimestamp(arg1, arg2 >>> 0);
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { dtor_idx: 136, function: Function { arguments: [NamedExternref("ErrorEvent")], shim_idx: 137, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { dtor_idx: 121, function: Function { arguments: [NamedExternref("ErrorEvent")], shim_idx: 122, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen_b55dfebcf81fdddf___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__web_sys_f8c9c786013e01a3___features__gen_ErrorEvent__ErrorEvent____Output_______, wasm_bindgen_b55dfebcf81fdddf___convert__closures_____invoke___web_sys_f8c9c786013e01a3___features__gen_ErrorEvent__ErrorEvent______true_);
             return ret;
         },

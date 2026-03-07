@@ -1,4 +1,4 @@
-use crate::data::DravyaError;
+use crate::error::DravyaError;
 use crate::{Greeks, PricingResult};
 
 pub struct HestonParams {
