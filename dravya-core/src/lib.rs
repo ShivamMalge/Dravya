@@ -1,6 +1,16 @@
 #![feature(portable_simd)]
 use wasm_bindgen::prelude::*;
 
+#[wasm_bindgen(start)]
+pub fn panicHookInit() {
+    console_error_panic_hook::set_once();
+}
+
+#[wasm_bindgen]
+pub fn diagnosticPanicTrigger() {
+    panic!("Diagnostic test");
+}
+
 pub mod compute;
 pub mod data;
 pub mod error;

@@ -74,6 +74,8 @@ export function calculate_implied_volatility(market_price: number, spot: number,
 
 export function deterministicSeedLog(seed: number): void;
 
+export function diagnosticPanicTrigger(): void;
+
 export class fixSimdScanner {
     free(): void;
     [Symbol.dispose](): void;
@@ -97,6 +99,8 @@ export class grpcWebClient {
 export function initThreadPool(num_threads: number): Promise<any>;
 
 export function loadParquetToMemory(data: Uint8Array): number;
+
+export function panicHookInit(): void;
 
 export function price_heston_american(spot: number, strike: number, time: number, rate: number, kappa: number, theta: number, sigma_v: number, rho: number, v0: number, s_steps: number, v_steps: number, t_steps: number): any;
 
@@ -172,14 +176,11 @@ export interface InitOutput {
     readonly price_monte_carlo_gpu: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => any;
     readonly sort_colors: (a: number, b: number, c: any) => void;
     readonly sort_colors_with_history: (a: number, b: number) => [number, number, number];
+    readonly panicHookInit: () => void;
     readonly vannaVolgaAdjustment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly diagnosticPanicTrigger: () => void;
     readonly rkyvArchiveBuffer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: bigint, k: number, l: number) => [number, number];
     readonly zeroDecodeAccess: (a: number, b: number) => number;
-    readonly __wbg_fixsimdscanner_free: (a: number, b: number) => void;
-    readonly fixsimdscanner_new: () => number;
-    readonly fixsimdscanner_tagValueMap: (a: number, b: number, c: number) => [number, number, number];
-    readonly rayonWorkerPool: (a: number, b: number) => [number, number, number];
-    readonly sharedArrayLockFree: (a: number, b: number, c: any, d: number) => [number, number];
     readonly __wbg_arrowmemorypointer_free: (a: number, b: number) => void;
     readonly __wbg_get_arrowmemorypointer_array_ptr: (a: number) => number;
     readonly __wbg_get_arrowmemorypointer_data_ptr: (a: number) => number;
@@ -191,6 +192,11 @@ export interface InitOutput {
     readonly __wbg_set_arrowmemorypointer_schema_ptr: (a: number, b: number) => void;
     readonly loadParquetToMemory: (a: number, b: number) => number;
     readonly zeroCopyBufferView: (a: number, b: number) => number;
+    readonly __wbg_fixsimdscanner_free: (a: number, b: number) => void;
+    readonly fixsimdscanner_new: () => number;
+    readonly fixsimdscanner_tagValueMap: (a: number, b: number, c: number) => [number, number, number];
+    readonly rayonWorkerPool: (a: number, b: number) => [number, number, number];
+    readonly sharedArrayLockFree: (a: number, b: number, c: any, d: number) => [number, number];
     readonly __wbg_grpcwebclient_free: (a: number, b: number) => void;
     readonly __wbg_livetelemetry_free: (a: number, b: number) => void;
     readonly __wbg_tickringbuffer_free: (a: number, b: number) => void;
@@ -245,8 +251,8 @@ export interface InitOutput {
     readonly __externref_table_alloc: () => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __wbindgen_exn_store: (a: number) => void;
-    readonly __externref_table_dealloc: (a: number) => void;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
+    readonly __externref_table_dealloc: (a: number) => void;
     readonly __wbindgen_start: () => void;
 }
 
