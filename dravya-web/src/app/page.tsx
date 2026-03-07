@@ -337,8 +337,8 @@ export default function Home() {
                                     </tr>
                                     <tr style={trStyle}>
                                         <td style={tdStyle}>Heap Pressure</td>
-                                        <td style={tdStyle}>{jsBenchmarkResult?.heapUsedBytes !== null ? formatBytes(jsBenchmarkResult!.heapUsedBytes!) : 'N/A'}</td>
-                                        <td style={tdStyle}>{wasmBenchmarkResult?.heapUsedBytes !== null ? formatBytes(wasmBenchmarkResult!.heapUsedBytes!) : 'N/A'}</td>
+                                        <td style={tdStyle}>{jsBenchmarkResult && jsBenchmarkResult.heapUsedBytes != null ? formatBytes(jsBenchmarkResult.heapUsedBytes) : 'N/A'}</td>
+                                        <td style={tdStyle}>{wasmBenchmarkResult && wasmBenchmarkResult.heapUsedBytes != null ? formatBytes(wasmBenchmarkResult.heapUsedBytes) : 'N/A'}</td>
                                     </tr>
                                     {jsBenchmarkResult && wasmBenchmarkResult && (
                                         <tr style={{ ...trStyle, backgroundColor: '#1e293b' }}>
