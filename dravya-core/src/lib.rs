@@ -4,6 +4,7 @@ use wasm_bindgen::prelude::*;
 pub mod compute;
 pub mod data;
 pub mod models;
+pub mod systems;
 
 #[derive(Clone)]
 pub enum EngineError {

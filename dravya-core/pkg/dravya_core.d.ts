@@ -10,6 +10,16 @@ export class DravyaEngine {
     step_count(): number;
 }
 
+export class arrowMemoryPointer {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    array_ptr: number;
+    data_ptr: number;
+    length: number;
+    schema_ptr: number;
+}
+
 export function batch_calculate_implied_volatility(csv_content: string): Float64Array;
 
 export function benchmark_simd_greeks(spot: number, strike: number, time: number, rate: number, vol: number, batch_size: number): any;
@@ -26,6 +36,8 @@ export function generate_vol_surface(spot: number, rate: number, base_vol: numbe
 
 export function get_wasm_memory_size(): number;
 
+export function loadParquetToMemory(data: Uint8Array): number;
+
 export function price_heston_american(spot: number, strike: number, time: number, rate: number, kappa: number, theta: number, sigma_v: number, rho: number, v0: number, s_steps: number, v_steps: number, t_steps: number): any;
 
 export function price_heston_european(spot: number, strike: number, time: number, rate: number, kappa: number, theta: number, sigma_v: number, rho: number, v0: number, s_steps: number, v_steps: number, t_steps: number): any;
@@ -37,6 +49,8 @@ export function sort_colors(colors: Uint8Array): void;
 export function sort_colors_with_history(colors: Uint8Array): any;
 
 export function vannaVolgaAdjustment(spot: number, strike: number, time: number, rate: number, vol_atm: number, vol_rr: number, vol_bf: number): number;
+
+export function zeroCopyBufferView(values: Float64Array): arrowMemoryPointer;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
@@ -61,12 +75,23 @@ export interface InitOutput {
     readonly sort_colors: (a: number, b: number, c: any) => void;
     readonly sort_colors_with_history: (a: number, b: number) => any;
     readonly vannaVolgaAdjustment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
-    readonly wasm_bindgen_f8c8a67a8616b055___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__wasm_bindgen_f8c8a67a8616b055___JsValue____Output_______: (a: number, b: number) => void;
-    readonly wasm_bindgen_f8c8a67a8616b055___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__wasm_bindgen_f8c8a67a8616b055___JsValue____Output___core_2be32f71e062320c___result__Result_____wasm_bindgen_f8c8a67a8616b055___JsError___: (a: number, b: number) => void;
-    readonly wasm_bindgen_f8c8a67a8616b055___convert__closures_____invoke___wasm_bindgen_f8c8a67a8616b055___JsValue__core_2be32f71e062320c___result__Result_____wasm_bindgen_f8c8a67a8616b055___JsError___true_: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen_f8c8a67a8616b055___convert__closures_____invoke___js_sys_1260de572ff683ed___Function_fn_wasm_bindgen_f8c8a67a8616b055___JsValue_____wasm_bindgen_f8c8a67a8616b055___sys__Undefined___js_sys_1260de572ff683ed___Function_fn_wasm_bindgen_f8c8a67a8616b055___JsValue_____wasm_bindgen_f8c8a67a8616b055___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
-    readonly wasm_bindgen_f8c8a67a8616b055___convert__closures_____invoke___wasm_bindgen_f8c8a67a8616b055___JsValue______true_: (a: number, b: number, c: any) => void;
-    readonly wasm_bindgen_f8c8a67a8616b055___convert__closures_____invoke___wasm_bindgen_f8c8a67a8616b055___JsValue______true__1: (a: number, b: number, c: any) => void;
+    readonly __wbg_arrowmemorypointer_free: (a: number, b: number) => void;
+    readonly __wbg_get_arrowmemorypointer_array_ptr: (a: number) => number;
+    readonly __wbg_get_arrowmemorypointer_data_ptr: (a: number) => number;
+    readonly __wbg_get_arrowmemorypointer_length: (a: number) => number;
+    readonly __wbg_get_arrowmemorypointer_schema_ptr: (a: number) => number;
+    readonly __wbg_set_arrowmemorypointer_array_ptr: (a: number, b: number) => void;
+    readonly __wbg_set_arrowmemorypointer_data_ptr: (a: number, b: number) => void;
+    readonly __wbg_set_arrowmemorypointer_length: (a: number, b: number) => void;
+    readonly __wbg_set_arrowmemorypointer_schema_ptr: (a: number, b: number) => void;
+    readonly loadParquetToMemory: (a: number, b: number) => number;
+    readonly zeroCopyBufferView: (a: number, b: number) => number;
+    readonly wasm_bindgen_39059793c51de849___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__wasm_bindgen_39059793c51de849___JsValue____Output_______: (a: number, b: number) => void;
+    readonly wasm_bindgen_39059793c51de849___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__wasm_bindgen_39059793c51de849___JsValue____Output___core_2be32f71e062320c___result__Result_____wasm_bindgen_39059793c51de849___JsError___: (a: number, b: number) => void;
+    readonly wasm_bindgen_39059793c51de849___convert__closures_____invoke___wasm_bindgen_39059793c51de849___JsValue__core_2be32f71e062320c___result__Result_____wasm_bindgen_39059793c51de849___JsError___true_: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen_39059793c51de849___convert__closures_____invoke___js_sys_765e3a270b859b1f___Function_fn_wasm_bindgen_39059793c51de849___JsValue_____wasm_bindgen_39059793c51de849___sys__Undefined___js_sys_765e3a270b859b1f___Function_fn_wasm_bindgen_39059793c51de849___JsValue_____wasm_bindgen_39059793c51de849___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen_39059793c51de849___convert__closures_____invoke___wasm_bindgen_39059793c51de849___JsValue______true_: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen_39059793c51de849___convert__closures_____invoke___wasm_bindgen_39059793c51de849___JsValue______true__1: (a: number, b: number, c: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;
