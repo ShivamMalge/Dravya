@@ -305,6 +305,33 @@ export function price_monte_carlo_gpu(spot, strike, time, rate, vol, num_paths, 
 }
 
 /**
+ * @param {number} spot
+ * @param {Float64Array} strikes
+ * @param {Float64Array} maturities
+ * @param {Float64Array} vol_surface
+ * @param {Float64Array} rates_curve
+ * @param {bigint} timestamp
+ * @param {string} computation_hash
+ * @returns {Uint8Array}
+ */
+export function rkyvArchiveBuffer(spot, strikes, maturities, vol_surface, rates_curve, timestamp, computation_hash) {
+    const ptr0 = passArrayF64ToWasm0(strikes, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ptr1 = passArrayF64ToWasm0(maturities, wasm.__wbindgen_malloc);
+    const len1 = WASM_VECTOR_LEN;
+    const ptr2 = passArrayF64ToWasm0(vol_surface, wasm.__wbindgen_malloc);
+    const len2 = WASM_VECTOR_LEN;
+    const ptr3 = passArrayF64ToWasm0(rates_curve, wasm.__wbindgen_malloc);
+    const len3 = WASM_VECTOR_LEN;
+    const ptr4 = passStringToWasm0(computation_hash, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+    const len4 = WASM_VECTOR_LEN;
+    const ret = wasm.rkyvArchiveBuffer(spot, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, timestamp, ptr4, len4);
+    var v6 = getArrayU8FromWasm0(ret[0], ret[1]).slice();
+    wasm.__wbindgen_free(ret[0], ret[1] * 1, 1);
+    return v6;
+}
+
+/**
  * @param {Uint8Array} colors
  */
 export function sort_colors(colors) {
@@ -348,6 +375,17 @@ export function zeroCopyBufferView(values) {
     const len0 = WASM_VECTOR_LEN;
     const ret = wasm.zeroCopyBufferView(ptr0, len0);
     return arrowMemoryPointer.__wrap(ret);
+}
+
+/**
+ * @param {Uint8Array} buffer
+ * @returns {number}
+ */
+export function zeroDecodeAccess(buffer) {
+    const ptr0 = passArray8ToWasm0(buffer, wasm.__wbindgen_malloc);
+    const len0 = WASM_VECTOR_LEN;
+    const ret = wasm.zeroDecodeAccess(ptr0, len0);
+    return ret;
 }
 
 function __wbg_get_imports() {
@@ -1085,17 +1123,17 @@ function __wbg_get_imports() {
             arg0.writeTimestamp(arg1, arg2 >>> 0);
         },
         __wbindgen_cast_0000000000000001: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { dtor_idx: 281, function: Function { arguments: [Externref], shim_idx: 282, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { dtor_idx: 389, function: Function { arguments: [Externref], shim_idx: 390, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen_39059793c51de849___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__wasm_bindgen_39059793c51de849___JsValue____Output_______, wasm_bindgen_39059793c51de849___convert__closures_____invoke___wasm_bindgen_39059793c51de849___JsValue______true_);
             return ret;
         },
         __wbindgen_cast_0000000000000002: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { dtor_idx: 281, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 282, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { dtor_idx: 389, function: Function { arguments: [NamedExternref("GPUUncapturedErrorEvent")], shim_idx: 390, ret: Unit, inner_ret: Some(Unit) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen_39059793c51de849___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__wasm_bindgen_39059793c51de849___JsValue____Output_______, wasm_bindgen_39059793c51de849___convert__closures_____invoke___wasm_bindgen_39059793c51de849___JsValue______true__1);
             return ret;
         },
         __wbindgen_cast_0000000000000003: function(arg0, arg1) {
-            // Cast intrinsic for `Closure(Closure { dtor_idx: 289, function: Function { arguments: [Externref], shim_idx: 290, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+            // Cast intrinsic for `Closure(Closure { dtor_idx: 397, function: Function { arguments: [Externref], shim_idx: 398, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
             const ret = makeMutClosure(arg0, arg1, wasm.wasm_bindgen_39059793c51de849___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__wasm_bindgen_39059793c51de849___JsValue____Output___core_2be32f71e062320c___result__Result_____wasm_bindgen_39059793c51de849___JsError___, wasm_bindgen_39059793c51de849___convert__closures_____invoke___wasm_bindgen_39059793c51de849___JsValue__core_2be32f71e062320c___result__Result_____wasm_bindgen_39059793c51de849___JsError___true_);
             return ret;
         },

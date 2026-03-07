@@ -20,6 +20,8 @@ export const price_monte_carlo_gpu: (a: number, b: number, c: number, d: number,
 export const sort_colors: (a: number, b: number, c: any) => void;
 export const sort_colors_with_history: (a: number, b: number) => any;
 export const vannaVolgaAdjustment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+export const rkyvArchiveBuffer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: bigint, k: number, l: number) => [number, number];
+export const zeroDecodeAccess: (a: number, b: number) => number;
 export const __wbg_arrowmemorypointer_free: (a: number, b: number) => void;
 export const __wbg_get_arrowmemorypointer_array_ptr: (a: number) => number;
 export const __wbg_get_arrowmemorypointer_data_ptr: (a: number) => number;

@@ -44,6 +44,8 @@ export function price_heston_european(spot: number, strike: number, time: number
 
 export function price_monte_carlo_gpu(spot: number, strike: number, time: number, rate: number, vol: number, num_paths: number, steps: number, seed: number): Promise<any>;
 
+export function rkyvArchiveBuffer(spot: number, strikes: Float64Array, maturities: Float64Array, vol_surface: Float64Array, rates_curve: Float64Array, timestamp: bigint, computation_hash: string): Uint8Array;
+
 export function sort_colors(colors: Uint8Array): void;
 
 export function sort_colors_with_history(colors: Uint8Array): any;
@@ -51,6 +53,8 @@ export function sort_colors_with_history(colors: Uint8Array): any;
 export function vannaVolgaAdjustment(spot: number, strike: number, time: number, rate: number, vol_atm: number, vol_rr: number, vol_bf: number): number;
 
 export function zeroCopyBufferView(values: Float64Array): arrowMemoryPointer;
+
+export function zeroDecodeAccess(buffer: Uint8Array): number;
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
@@ -75,6 +79,8 @@ export interface InitOutput {
     readonly sort_colors: (a: number, b: number, c: any) => void;
     readonly sort_colors_with_history: (a: number, b: number) => any;
     readonly vannaVolgaAdjustment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly rkyvArchiveBuffer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: bigint, k: number, l: number) => [number, number];
+    readonly zeroDecodeAccess: (a: number, b: number) => number;
     readonly __wbg_arrowmemorypointer_free: (a: number, b: number) => void;
     readonly __wbg_get_arrowmemorypointer_array_ptr: (a: number) => number;
     readonly __wbg_get_arrowmemorypointer_data_ptr: (a: number) => number;
