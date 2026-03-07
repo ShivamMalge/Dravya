@@ -1,5 +1,7 @@
 use wasm_bindgen::prelude::*;
 
+pub mod data;
+
 #[derive(Clone)]
 pub enum EngineError {
     InvalidInput,
@@ -436,6 +438,12 @@ pub fn generate_vol_surface(
 ) -> JsValue {
     let result = generate_vol_surface_data(spot, rate, base_vol, strike_points, time_points);
     serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
+}
+
+#[wasm_bindgen]
+pub fn batch_calculate_implied_volatility(csv_content: &str) -> Result<Vec<f64>, JsValue> {
+    data::batch_calculate_iv(csv_content, newton_raphson_iv)
+        .map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
 #[cfg(test)]

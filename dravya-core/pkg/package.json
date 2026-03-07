@@ -1,7 +1,7 @@
 {
   "name": "dravya-core",
   "type": "module",
-  "description": "High-performance algorithmic visualization engine with WebAssembly support",
+  "description": "High-performance WASM-backed algorithmic and quantitative risk engine",
   "version": "0.1.0",
   "license": "MIT",
   "repository": {
@@ -21,8 +21,8 @@
   "keywords": [
     "wasm",
     "algorithms",
-    "visualization",
-    "sorting",
+    "quantitative-finance",
+    "options-pricing",
     "webassembly"
   ]
 }

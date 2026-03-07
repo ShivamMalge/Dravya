@@ -2,6 +2,7 @@
 /* eslint-disable */
 export const memory: WebAssembly.Memory;
 export const __wbg_dravyaengine_free: (a: number, b: number) => void;
+export const batch_calculate_implied_volatility: (a: number, b: number) => [number, number, number, number];
 export const calculate_binomial_tree: (a: number, b: number, c: number, d: number, e: number, f: number) => any;
 export const calculate_implied_volatility: (a: number, b: number, c: number, d: number, e: number) => number;
 export const dravyaengine_new: () => number;
@@ -18,4 +19,5 @@ export const __wbindgen_exn_store: (a: number) => void;
 export const __externref_table_alloc: () => number;
 export const __wbindgen_externrefs: WebAssembly.Table;
 export const __externref_table_dealloc: (a: number) => void;
+export const __wbindgen_free: (a: number, b: number, c: number) => void;
 export const __wbindgen_start: () => void;

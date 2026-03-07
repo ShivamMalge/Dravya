@@ -10,6 +10,8 @@ export class DravyaEngine {
     step_count(): number;
 }
 
+export function batch_calculate_implied_volatility(csv_content: string): Float64Array;
+
 export function calculate_binomial_tree(spot_price: number, strike_price: number, time_to_expiry: number, risk_free_rate: number, volatility: number, steps: number): any;
 
 export function calculate_implied_volatility(market_price: number, spot: number, strike: number, time: number, rate: number): number;
@@ -27,6 +29,7 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_dravyaengine_free: (a: number, b: number) => void;
+    readonly batch_calculate_implied_volatility: (a: number, b: number) => [number, number, number, number];
     readonly calculate_binomial_tree: (a: number, b: number, c: number, d: number, e: number, f: number) => any;
     readonly calculate_implied_volatility: (a: number, b: number, c: number, d: number, e: number) => number;
     readonly dravyaengine_new: () => number;
@@ -43,6 +46,7 @@ export interface InitOutput {
     readonly __externref_table_alloc: () => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
     readonly __externref_table_dealloc: (a: number) => void;
+    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_start: () => void;
 }
 
