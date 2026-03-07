@@ -1,5 +1,12 @@
 /* tslint:disable */
 /* eslint-disable */
+/**
+ * The `ReadableStreamType` enum.
+ *
+ * *This API requires the following crate features to be activated: `ReadableStreamType`*
+ */
+
+type ReadableStreamType = "bytes";
 
 export class DravyaEngine {
     free(): void;
@@ -8,6 +15,43 @@ export class DravyaEngine {
     sort_colors(colors: Uint8Array): void;
     sort_colors_with_history(colors: Uint8Array): any;
     step_count(): number;
+}
+
+export class IntoUnderlyingByteSource {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    cancel(): void;
+    pull(controller: ReadableByteStreamController): Promise<any>;
+    start(controller: ReadableByteStreamController): void;
+    readonly autoAllocateChunkSize: number;
+    readonly type: ReadableStreamType;
+}
+
+export class IntoUnderlyingSink {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    abort(reason: any): Promise<any>;
+    close(): Promise<any>;
+    write(chunk: any): Promise<any>;
+}
+
+export class IntoUnderlyingSource {
+    private constructor();
+    free(): void;
+    [Symbol.dispose](): void;
+    cancel(): void;
+    pull(controller: ReadableStreamDefaultController): Promise<any>;
+}
+
+export class LiveTelemetry {
+    free(): void;
+    [Symbol.dispose](): void;
+    current_latency(): number;
+    constructor();
+    packets_per_second(): number;
+    track_packet(latency: number): void;
 }
 
 export class arrowMemoryPointer {
@@ -35,6 +79,13 @@ export function generate_sabr_surface(spot: number, rate: number, alpha: number,
 export function generate_vol_surface(spot: number, rate: number, base_vol: number, strike_points: number, time_points: number): any;
 
 export function get_wasm_memory_size(): number;
+
+export class grpcWebClient {
+    free(): void;
+    [Symbol.dispose](): void;
+    connection_status(): string;
+    constructor(endpoint: string);
+}
 
 export function initThreadPool(num_threads: number): Promise<any>;
 
@@ -69,6 +120,14 @@ export class wbg_rayon_PoolBuilder {
 
 export function wbg_rayon_start_worker(receiver: number): void;
 
+export class wsMarketStream {
+    free(): void;
+    [Symbol.dispose](): void;
+    constructor(url: string);
+    send_binary(payload: Uint8Array): void;
+    subscribe(payload: string): void;
+}
+
 export function zeroCopyBufferView(values: Float64Array): arrowMemoryPointer;
 
 export function zeroDecodeAccess(buffer: Uint8Array): number;
@@ -98,8 +157,20 @@ export interface InitOutput {
     readonly vannaVolgaAdjustment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly rkyvArchiveBuffer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: bigint, k: number, l: number) => [number, number];
     readonly zeroDecodeAccess: (a: number, b: number) => number;
-    readonly sharedArrayLockFree: (a: number, b: number, c: any, d: number) => void;
+    readonly __wbg_grpcwebclient_free: (a: number, b: number) => void;
+    readonly __wbg_livetelemetry_free: (a: number, b: number) => void;
+    readonly __wbg_wsmarketstream_free: (a: number, b: number) => void;
+    readonly grpcwebclient_connection_status: (a: number) => [number, number];
+    readonly grpcwebclient_new: (a: number, b: number) => number;
+    readonly livetelemetry_current_latency: (a: number) => number;
+    readonly livetelemetry_new: () => number;
+    readonly livetelemetry_packets_per_second: (a: number) => number;
+    readonly livetelemetry_track_packet: (a: number, b: number) => void;
     readonly rayonWorkerPool: (a: number, b: number) => number;
+    readonly sharedArrayLockFree: (a: number, b: number, c: any, d: number) => void;
+    readonly wsmarketstream_new: (a: number, b: number) => [number, number, number];
+    readonly wsmarketstream_send_binary: (a: number, b: number, c: number) => [number, number];
+    readonly wsmarketstream_subscribe: (a: number, b: number, c: number) => [number, number];
     readonly __wbg_arrowmemorypointer_free: (a: number, b: number) => void;
     readonly __wbg_get_arrowmemorypointer_array_ptr: (a: number) => number;
     readonly __wbg_get_arrowmemorypointer_data_ptr: (a: number) => number;
@@ -111,24 +182,41 @@ export interface InitOutput {
     readonly __wbg_set_arrowmemorypointer_schema_ptr: (a: number, b: number) => void;
     readonly loadParquetToMemory: (a: number, b: number) => number;
     readonly zeroCopyBufferView: (a: number, b: number) => number;
+    readonly __wbg_intounderlyingbytesource_free: (a: number, b: number) => void;
+    readonly intounderlyingbytesource_autoAllocateChunkSize: (a: number) => number;
+    readonly intounderlyingbytesource_cancel: (a: number) => void;
+    readonly intounderlyingbytesource_pull: (a: number, b: any) => any;
+    readonly intounderlyingbytesource_start: (a: number, b: any) => void;
+    readonly intounderlyingbytesource_type: (a: number) => number;
+    readonly __wbg_intounderlyingsink_free: (a: number, b: number) => void;
+    readonly __wbg_intounderlyingsource_free: (a: number, b: number) => void;
+    readonly intounderlyingsink_abort: (a: number, b: any) => any;
+    readonly intounderlyingsink_close: (a: number) => any;
+    readonly intounderlyingsink_write: (a: number, b: any) => any;
+    readonly intounderlyingsource_cancel: (a: number) => void;
+    readonly intounderlyingsource_pull: (a: number, b: any) => any;
     readonly __wbg_wbg_rayon_poolbuilder_free: (a: number, b: number) => void;
     readonly initThreadPool: (a: number) => any;
     readonly wbg_rayon_poolbuilder_build: (a: number) => void;
     readonly wbg_rayon_poolbuilder_numThreads: (a: number) => number;
     readonly wbg_rayon_poolbuilder_receiver: (a: number) => number;
     readonly wbg_rayon_start_worker: (a: number) => void;
-    readonly wasm_bindgen_39059793c51de849___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__wasm_bindgen_39059793c51de849___JsValue____Output_______: (a: number, b: number) => void;
-    readonly wasm_bindgen_39059793c51de849___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__wasm_bindgen_39059793c51de849___JsValue____Output___core_2be32f71e062320c___result__Result_____wasm_bindgen_39059793c51de849___JsError___: (a: number, b: number) => void;
-    readonly wasm_bindgen_39059793c51de849___convert__closures_____invoke___wasm_bindgen_39059793c51de849___JsValue__core_2be32f71e062320c___result__Result_____wasm_bindgen_39059793c51de849___JsError___true_: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen_39059793c51de849___convert__closures_____invoke___js_sys_765e3a270b859b1f___Function_fn_wasm_bindgen_39059793c51de849___JsValue_____wasm_bindgen_39059793c51de849___sys__Undefined___js_sys_765e3a270b859b1f___Function_fn_wasm_bindgen_39059793c51de849___JsValue_____wasm_bindgen_39059793c51de849___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
-    readonly wasm_bindgen_39059793c51de849___convert__closures_____invoke___wasm_bindgen_39059793c51de849___JsValue______true_: (a: number, b: number, c: any) => void;
-    readonly wasm_bindgen_39059793c51de849___convert__closures_____invoke___wasm_bindgen_39059793c51de849___JsValue______true__1: (a: number, b: number, c: any) => void;
-    readonly wasm_bindgen_39059793c51de849___convert__closures_____invoke___web_sys_e91063ee58ff89aa___features__gen_MessageEvent__MessageEvent______true_: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen_b55dfebcf81fdddf___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__web_sys_f8c9c786013e01a3___features__gen_ErrorEvent__ErrorEvent____Output_______: (a: number, b: number) => void;
+    readonly wasm_bindgen_b55dfebcf81fdddf___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__wasm_bindgen_b55dfebcf81fdddf___JsValue____Output_______: (a: number, b: number) => void;
+    readonly wasm_bindgen_b55dfebcf81fdddf___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__wasm_bindgen_b55dfebcf81fdddf___JsValue____Output________1_: (a: number, b: number) => void;
+    readonly wasm_bindgen_b55dfebcf81fdddf___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__wasm_bindgen_b55dfebcf81fdddf___JsValue____Output___core_2be32f71e062320c___result__Result_____wasm_bindgen_b55dfebcf81fdddf___JsError___: (a: number, b: number) => void;
+    readonly wasm_bindgen_b55dfebcf81fdddf___convert__closures_____invoke___wasm_bindgen_b55dfebcf81fdddf___JsValue__core_2be32f71e062320c___result__Result_____wasm_bindgen_b55dfebcf81fdddf___JsError___true_: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen_b55dfebcf81fdddf___convert__closures_____invoke___js_sys_8e6cdd1004b8eff3___Function_fn_wasm_bindgen_b55dfebcf81fdddf___JsValue_____wasm_bindgen_b55dfebcf81fdddf___sys__Undefined___js_sys_8e6cdd1004b8eff3___Function_fn_wasm_bindgen_b55dfebcf81fdddf___JsValue_____wasm_bindgen_b55dfebcf81fdddf___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen_b55dfebcf81fdddf___convert__closures_____invoke___web_sys_f8c9c786013e01a3___features__gen_ErrorEvent__ErrorEvent______true_: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen_b55dfebcf81fdddf___convert__closures_____invoke___wasm_bindgen_b55dfebcf81fdddf___JsValue______true_: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen_b55dfebcf81fdddf___convert__closures_____invoke___wasm_bindgen_b55dfebcf81fdddf___JsValue______true__2: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen_b55dfebcf81fdddf___convert__closures_____invoke___wasm_bindgen_b55dfebcf81fdddf___JsValue______true__1_: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen_b55dfebcf81fdddf___convert__closures_____invoke___web_sys_f8c9c786013e01a3___features__gen_MessageEvent__MessageEvent______true_: (a: number, b: number, c: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
-    readonly __wbindgen_exn_store: (a: number) => void;
     readonly __externref_table_alloc: () => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
+    readonly __wbindgen_exn_store: (a: number) => void;
     readonly __externref_table_dealloc: (a: number) => void;
     readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_start: () => void;
