@@ -1,81 +1,175 @@
 # Dravya Engine
 
-![Dravya Header](https://raw.githubusercontent.com/ShivamMalge/Dravya/main/dravya-web/public/favicon.ico)
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![React](https://img.shields.io/badge/React-18.2.0-blue?logo=react)
+![Next.js](https://img.shields.io/badge/Next.js-14.2.1-black?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
+![Rust](https://img.shields.io/badge/Rust-1.77%2B-orange?logo=rust)
+![WebAssembly](https://img.shields.io/badge/WASM-Ready-purple?logo=webassembly)
+![Three.js](https://img.shields.io/badge/Three.js-0.164.0-white?logo=three.js)
 
-**Dravya Engine** is a high-performance quantitative risk and algorithmic visualization engine. It bridges the gap between massive numerical processing and immersive browser-based 3D visualization by pairing a **Rust/WebAssembly** mathematical core with a **Next.js + Three.js** frontend.
+**Dravya Engine** is a high-performance quantitative risk and algorithmic visualization platform. It bridges the gap between massive numerical processing and immersive browser-based 3D visualization by pairing a **Rust/WebAssembly mathematical core** with a **Next.js + Three.js frontend**.
 
-## Features
+---
 
-### 1. Quantitative Finance Models
-- **Binomial Lattice Engine:** A Cox-Ross-Rubinstein tree model calculating European option pricing and risk derivatives (Delta, Gamma, Theta). Visualized as a true 3D spatial node structure mapping Time, Asset Price, and Option Value.
-- **Volatility Surface Mesh:** A Newton-Raphson implied volatility solver iterating over Strike × Time grids to generate continuous 3D volatility surface meshes.
+## 📖 Table of Contents
+1. [Overview & Architecture](#-overview--architecture)
+2. [Core Features](#-core-features)
+3. [Prerequisites](#-prerequisites)
+4. [Installation & Local Setup](#-installation--local-setup)
+5. [Project Structure](#-project-structure)
+6. [Usage & Documentation](#-usage--documentation)
+7. [Dependencies](#-dependencies)
+8. [License](#-license)
 
-### 2. Algorithmic Visualizations
-- **Sorting Diagnostics:** Visualizes the memory states of algorithms like the Dutch National Flag in real-time, pulling state transitions directly from the Rust engine.
-- **Hardware Telemetry:** Direct memory introspection exposing WASM linear memory boundaries versus garbage-collected JS heap allocations during stress testing.
+---
 
-## Tech Stack
+## 🏗 Overview & Architecture
 
-- **Core Engine:** Rust, WebAssembly (`wasm-bindgen`), Serde
-- **Frontend App:** Next.js (App Router), React, TypeScript
-- **3D Graphics:** Three.js, React-Three-Fiber, Drei
-- **Data Ingestion:** Rust `csv` parser for batch quantitative compute
+At its heart, Dravya Engine uses a rigorous split-architecture design:
 
-## Architecture
+- **The Math Engine (`dravya-core`):** Written purely in Rust, it handles all heavy computational lifting—from sorting algorithms with state capture to Cox-Ross-Rubinstein binomial models and Newton-Raphson implied volatility solvers. It compiles down to a lightweight WebAssembly (`.wasm`) binary.
+- **The Visualization Layer (`dravya-web`):** A Next.js (App Router) client application that imports the WASM binary. It uses React-Three-Fiber (`@react-three/fiber`) to map the numerical arrays returned from Rust into stunning, interactive 3D spatial environments.
 
-The project relies on a strict monorepo layout:
+---
 
-```
-Dravya/
-├── dravya-core/       # Rust Mathematics + WASM Exporter
-│   ├── src/
-│   │   ├── lib.rs     # Options Math, IV Solvers, WASM Bindings
-│   │   └── data.rs    # CSV parsing and batch math logic
-│   └── Cargo.toml
-│
-└── dravya-web/        # Next.js Application
-    ├── public/wasm/   # Built WASM module outputs
-    └── src/
-        ├── app/       # UI Dashboard and Layouts
-        └── components/# Three.js Canvases (Tree, Surface, Axes3D)
-```
+## ✨ Core Features
 
-## Running Locally
+### Quantitative Finance Models
+* **3D Binomial Lattice Engine:** Calculates European option pricing and risk derivatives (Delta, Gamma, Theta). Visualized as a true 3D spatial node structure mapping Time (X), Asset Price (Y), and Option Value (Z). Features dynamic ITM/OTM spatial coloring.
+* **Continuous Volatility Surface:** Implements robust Newton-Raphson IV solvers over Strike × Time grids to generate dynamic 3D volatility surface meshes.
 
-### Prerequisites
-- Node.js > 18
-- Rust toolchain (`rustup`)
-- `wasm-pack` (`cargo install wasm-pack`)
+### Algorithmic Visualizations & Telemetry
+* **Sorting State Diagnostics:** Visualizes the memory states of algorithms (like the Dutch National Flag) in real-time, executing in WASM and rendering the step-by-step history arrays via 3D bars.
+* **Hardware Benchmarking:** Real-time diagnostics panel comparing native JS execution speeds against WebAssembly linear memory allocation speeds, including garbage-collection (GC) impact tracking.
+* **Batch CSV Processing:** Rust core contains a typed CSV ingestion pipeline capable of calculating IVs for thousands of option chain rows instantly.
 
-### 1. Build the WASM Core
+---
+
+## 🛠 Prerequisites
+
+Before cloning and building the project, ensure you have the following installed on your system:
+
+1. **Rust Toolchain:** (v1.77+ recommended)
+   * Install via [rustup.rs](https://rustup.rs/): `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`
+2. **WASM-Pack:**
+   * Used for compiling Rust into WebAssembly.
+   * Install via cargo: `cargo install wasm-pack`
+3. **Node.js:** (v18.17+ recommended)
+   * Check version: `node -v`
+4. **Git:**
+   * Check version: `git --version`
+
+---
+
+## 🚀 Installation & Local Setup
+
+### 1. Clone the Repository
 ```bash
+git clone https://github.com/ShivamMalge/Dravya.git
+cd Dravya
+```
+
+### 2. Build the Rust / WASM Core
+The web application requires the WASM binary payload to exist in its `public` directory.
+
+```bash
+# Navigate to the core crates
 cd dravya-core
+
+# Build the WASM module for browser/bundler targets
 wasm-pack build --target web
 
-# Copy the generated /pkg to the web public folder
+# Copy the generated JS bindings and WASM binary to the Next.js public folder
+# (Linux / macOS)
 cp pkg/dravya_core.js ../dravya-web/public/wasm/
 cp pkg/dravya_core_bg.wasm ../dravya-web/public/wasm/
-```
-*(Note: Windows users can use the equivalent `Copy-Item` in PowerShell).*
 
-### 2. Run the Next.js Frontend
+# (Windows PowerShell)
+# Copy-Item "pkg\dravya_core.js" -Destination "..\dravya-web\public\wasm\" -Force
+# Copy-Item "pkg\dravya_core_bg.wasm" -Destination "..\dravya-web\public\wasm\" -Force
+```
+
+### 3. Start the Next.js Frontend Development Server
+Once the WASM module is built and copied, initialize the web interface.
+
 ```bash
 cd ../dravya-web
+
+# Install all JavaScript/React dependencies
 npm install
+
+# Start the dev server
 npm run dev
 ```
 
-Navigate to `http://localhost:3000` to interact with the engine.
+Navigate to [http://localhost:3000](http://localhost:3000) in your web browser.
 
-## NPM Package
-The core Rust engine is available purely as a standalone NPM package for server-side or frontend execution via JS bindings:
+---
+
+## 📂 Project Structure
+
+Dravya Engine operates as a strict monorepo.
+
+```text
+Dravya/
+├── dravya-core/                   # The Rust Math & Quant Library
+│   ├── src/
+│   │   ├── lib.rs                 # FFI logic, Option Pricing, IV Solvers
+│   │   └── data.rs                # CSV Parsing and parallel ingestion
+│   ├── pkg/                       # Automatically generated by wasm-pack (Ignored)
+│   └── Cargo.toml                 # Rust dependencies
+│
+├── dravya-web/                    # The Next.js 3D Interactive Client
+│   ├── public/
+│   │   └── wasm/                  # Target output folder for dravya-core builds
+│   ├── src/
+│   │   ├── app/                   # Next.js App Router Pages and Layouts
+│   │   ├── components/            # React-Three-Fiber Components (Axes3D, VolSurface, TreeVisualizer)
+│   │   └── utils/                 # JS Fallbacks and Benchmarking Utilities
+│   └── package.json               # Node.js dependencies
+│   
+└── dravya-test/                   # Node.js Scripting validation environment (Ignored)
+```
+
+---
+
+## 📚 Usage & Documentation
+
+### Web Dashboard
+The web application is split into specialized tabs:
+- **Sort Visualizer:** Interactive standard array sorting engine with 3D animation ticks.
+- **Binomial Tree:** Real-time pricing of European derivatives via Cox-Ross-Rubinstein math. Drag sliders to adjust Spot, Strike, Risk-Free Rate, and Volatility parameters and watch the lattice scale instantly.
+- **Vol Surface:** Generates a 3D Strike × Time surface mesh for Implied Volatility calculation visualization.
+- **Diagnostics:** View comparative WASM memory limits and compute benchmarks versus pure JS V8 engine speed.
+
+### NPM Package
+The core mathematical Rust engine is also available purely as a standalone NPM package for server-side or frontend execution via JS bindings in external projects:
 
 ```bash
 npm install @dravya/core
 ```
 
-For package usage instructions, see the [`dravya-core` README](./dravya-core/README.md).
+For advanced core API integration (including invoking the engine via Node.js `initSync` configurations), refer to the comprehensive [dravya-core API README](./dravya-core/README.md).
 
-## License
+---
 
-MIT
+## 📦 Dependencies
+
+**Core Engine (`Cargo.toml`)**
+- `wasm-bindgen` & `js-sys` (JavaScript FFI)
+- `serde` & `serde-wasm-bindgen` (Serialization boundaries)
+- `csv` (Batch compute processing)
+
+**Frontend (`package.json`)**
+- `next` (v14+)
+- `react`, `react-dom`
+- `three` & `@types/three`
+- `@react-three/fiber`
+- `@react-three/drei` (3D text, cameras, html overlays)
+
+---
+
+## 📄 License
+
+Dravya Engine is open source software licensed as [MIT](https://opensource.org/licenses/MIT).
