@@ -27,6 +27,8 @@ arrow = { version = "54", default-features = false, features = ["ffi"] }
 parquet = { version = "54", default-features = false, features = ["arrow"] }
 bytes = "1.5"
 rkyv = { version = "0.7", features = ["validation", "alloc", "std"] }
+rayon = "1.8"
+wasm-bindgen-rayon = { version = "1.2" }
 
 [dependencies.web-sys]
 version = "0.3"

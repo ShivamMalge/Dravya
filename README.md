@@ -103,7 +103,16 @@ npm install
 npm run dev
 ```
 
-Navigate to [http://localhost:3000](http://localhost:3000) in your web browser.
+### 4. Multithreading & Shared Memory (Advanced)
+Dravya Engine utilizes `rayon` for massive parallelization via Web Workers and `SharedArrayBuffer`. To enable this in your production environment, the following **Cross-Origin Isolation (COI)** headers must be served by your host:
+
+| Header | Value |
+|--------|-------|
+| `Cross-Origin-Embedder-Policy` | `require-corp` |
+| `Cross-Origin-Opener-Policy` | `same-origin` |
+
+> [!IMPORTANT]
+> Without these headers, the browser will block `SharedArrayBuffer` for security reasons, and the multi-threaded WASM module will fail to initialize. Additionally, ensure the `.wasm` file is served with the `application/wasm` MIME type.
 
 ---
 
