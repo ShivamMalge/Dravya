@@ -114,6 +114,17 @@ export function sort_colors(colors: Uint8Array): void;
 
 export function sort_colors_with_history(colors: Uint8Array): any;
 
+export class tickRingBuffer {
+    free(): void;
+    [Symbol.dispose](): void;
+    acquire_visualizer_lock(): boolean;
+    arenaSteadyState(): boolean;
+    insert_tick(price: number, volume: number, timestamp: bigint): void;
+    constructor(capacity: number);
+    read_latest_ptr(): number;
+    release_visualizer_lock(): void;
+}
+
 export function vannaVolgaAdjustment(spot: number, strike: number, time: number, rate: number, vol_atm: number, vol_rr: number, vol_bf: number): number;
 
 export class wbg_rayon_PoolBuilder {
@@ -164,23 +175,6 @@ export interface InitOutput {
     readonly vannaVolgaAdjustment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly rkyvArchiveBuffer: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: bigint, k: number, l: number) => [number, number];
     readonly zeroDecodeAccess: (a: number, b: number) => number;
-    readonly __wbg_grpcwebclient_free: (a: number, b: number) => void;
-    readonly __wbg_livetelemetry_free: (a: number, b: number) => void;
-    readonly __wbg_wsmarketstream_free: (a: number, b: number) => void;
-    readonly grpcwebclient_connection_status: (a: number) => [number, number];
-    readonly grpcwebclient_new: (a: number, b: number) => number;
-    readonly livetelemetry_current_latency: (a: number) => number;
-    readonly livetelemetry_new: () => number;
-    readonly livetelemetry_packets_per_second: (a: number) => number;
-    readonly livetelemetry_track_packet: (a: number, b: number) => void;
-    readonly sharedArrayLockFree: (a: number, b: number, c: any, d: number) => void;
-    readonly wsmarketstream_new: (a: number, b: number) => [number, number, number];
-    readonly wsmarketstream_send_binary: (a: number, b: number, c: number) => [number, number];
-    readonly wsmarketstream_subscribe: (a: number, b: number, c: number) => [number, number];
-    readonly rayonWorkerPool: (a: number, b: number) => number;
-    readonly __wbg_fixsimdscanner_free: (a: number, b: number) => void;
-    readonly fixsimdscanner_new: () => number;
-    readonly fixsimdscanner_tagValueMap: (a: number, b: number, c: number) => number;
     readonly __wbg_arrowmemorypointer_free: (a: number, b: number) => void;
     readonly __wbg_get_arrowmemorypointer_array_ptr: (a: number) => number;
     readonly __wbg_get_arrowmemorypointer_data_ptr: (a: number) => number;
@@ -192,6 +186,30 @@ export interface InitOutput {
     readonly __wbg_set_arrowmemorypointer_schema_ptr: (a: number, b: number) => void;
     readonly loadParquetToMemory: (a: number, b: number) => number;
     readonly zeroCopyBufferView: (a: number, b: number) => number;
+    readonly __wbg_fixsimdscanner_free: (a: number, b: number) => void;
+    readonly fixsimdscanner_new: () => number;
+    readonly fixsimdscanner_tagValueMap: (a: number, b: number, c: number) => number;
+    readonly sharedArrayLockFree: (a: number, b: number, c: any, d: number) => void;
+    readonly rayonWorkerPool: (a: number, b: number) => number;
+    readonly __wbg_grpcwebclient_free: (a: number, b: number) => void;
+    readonly __wbg_livetelemetry_free: (a: number, b: number) => void;
+    readonly __wbg_tickringbuffer_free: (a: number, b: number) => void;
+    readonly __wbg_wsmarketstream_free: (a: number, b: number) => void;
+    readonly grpcwebclient_connection_status: (a: number) => [number, number];
+    readonly grpcwebclient_new: (a: number, b: number) => number;
+    readonly livetelemetry_current_latency: (a: number) => number;
+    readonly livetelemetry_new: () => number;
+    readonly livetelemetry_packets_per_second: (a: number) => number;
+    readonly livetelemetry_track_packet: (a: number, b: number) => void;
+    readonly tickringbuffer_acquire_visualizer_lock: (a: number) => number;
+    readonly tickringbuffer_arenaSteadyState: (a: number) => number;
+    readonly tickringbuffer_insert_tick: (a: number, b: number, c: number, d: bigint) => void;
+    readonly tickringbuffer_new: (a: number) => number;
+    readonly tickringbuffer_read_latest_ptr: (a: number) => number;
+    readonly tickringbuffer_release_visualizer_lock: (a: number) => void;
+    readonly wsmarketstream_new: (a: number, b: number) => [number, number, number];
+    readonly wsmarketstream_send_binary: (a: number, b: number, c: number) => [number, number];
+    readonly wsmarketstream_subscribe: (a: number, b: number, c: number) => [number, number];
     readonly __wbg_intounderlyingbytesource_free: (a: number, b: number) => void;
     readonly intounderlyingbytesource_autoAllocateChunkSize: (a: number) => number;
     readonly intounderlyingbytesource_cancel: (a: number) => void;
