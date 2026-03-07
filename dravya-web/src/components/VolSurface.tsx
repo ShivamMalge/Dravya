@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useMemo, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import React, { useMemo } from 'react';
+import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -14,13 +14,7 @@ interface VolSurfaceProps {
 }
 
 function SurfaceMesh({ impliedVolGrid, strikeAxis, timeAxis, gridRows, gridCols }: VolSurfaceProps) {
-    const meshRef = useRef<THREE.Mesh>(null);
-
-    useFrame(() => {
-        if (meshRef.current) {
-            meshRef.current.rotation.z += 0.001;
-        }
-    });
+    const geometryKey = useMemo(() => impliedVolGrid.reduce((acc, v, i) => acc + v * (i + 1), 0), [impliedVolGrid]);
 
     const { geometry, colorArray } = useMemo(() => {
         const geom = new THREE.BufferGeometry();
@@ -77,7 +71,7 @@ function SurfaceMesh({ impliedVolGrid, strikeAxis, timeAxis, gridRows, gridCols 
     }, [impliedVolGrid, gridRows, gridCols]);
 
     return (
-        <mesh ref={meshRef} geometry={geometry}>
+        <mesh key={geometryKey} geometry={geometry}>
             <meshStandardMaterial vertexColors side={THREE.DoubleSide} metalness={0.3} roughness={0.5} />
         </mesh>
     );
