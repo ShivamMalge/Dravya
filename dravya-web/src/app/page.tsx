@@ -130,7 +130,7 @@ export default function Home() {
     const executeSort = useCallback(async () => {
         stopPlayback();
         try {
-            const modulePath = ['..', '..', 'dravya-core', 'pkg', 'dravya_core.js'].join('/');
+            const modulePath = '/wasm/dravya_core.js';
             const wasmModule = await (new Function('p', 'return import(p)'))(modulePath) as {
                 default: () => Promise<void>;
                 sort_colors_with_history: (a: Uint8Array) => number[][];
@@ -191,7 +191,7 @@ export default function Home() {
 
     const executeBinomialTree = useCallback(async () => {
         try {
-            const modulePath = ['..', '..', 'dravya-core', 'pkg', 'dravya_core.js'].join('/');
+            const modulePath = '/wasm/dravya_core.js';
             const wasmModule = await (new Function('p', 'return import(p)'))(modulePath) as {
                 default: () => Promise<void>;
                 calculate_binomial_tree: (s: number, k: number, t: number, r: number, v: number, n: number) => BinomialResult;
