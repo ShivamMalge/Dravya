@@ -97,6 +97,25 @@ export function calculate_implied_volatility(market_price, spot, strike, time, r
 /**
  * @param {number} spot
  * @param {number} rate
+ * @param {number} alpha
+ * @param {number} beta
+ * @param {number} rho
+ * @param {number} nu
+ * @param {number} strike_points
+ * @param {number} time_points
+ * @returns {any}
+ */
+export function generate_sabr_surface(spot, rate, alpha, beta, rho, nu, strike_points, time_points) {
+    const ret = wasm.generate_sabr_surface(spot, rate, alpha, beta, rho, nu, strike_points, time_points);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {number} spot
+ * @param {number} rate
  * @param {number} base_vol
  * @param {number} strike_points
  * @param {number} time_points

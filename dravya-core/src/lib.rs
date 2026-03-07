@@ -471,6 +471,22 @@ pub fn price_heston_american(
     serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
+#[wasm_bindgen]
+pub fn generate_sabr_surface(
+    spot: f64,
+    rate: f64,
+    alpha: f64,
+    beta: f64,
+    rho: f64,
+    nu: f64,
+    strike_points: usize,
+    time_points: usize,
+) -> Result<JsValue, JsValue> {
+    let params = models::sabr::SabrParams { alpha, beta, rho, nu };
+    let result = models::sabr::build_sabr_surface_data(spot, rate, strike_points, time_points, &params);
+    serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
 
 #[cfg(test)]
 mod tests {

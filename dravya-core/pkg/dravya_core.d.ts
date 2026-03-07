@@ -16,6 +16,8 @@ export function calculate_binomial_tree(spot_price: number, strike_price: number
 
 export function calculate_implied_volatility(market_price: number, spot: number, strike: number, time: number, rate: number): number;
 
+export function generate_sabr_surface(spot: number, rate: number, alpha: number, beta: number, rho: number, nu: number, strike_points: number, time_points: number): any;
+
 export function generate_vol_surface(spot: number, rate: number, base_vol: number, strike_points: number, time_points: number): any;
 
 export function get_wasm_memory_size(): number;
@@ -40,6 +42,7 @@ export interface InitOutput {
     readonly dravyaengine_sort_colors: (a: number, b: number, c: number, d: any) => [number, number];
     readonly dravyaengine_sort_colors_with_history: (a: number, b: number, c: number) => [number, number, number];
     readonly dravyaengine_step_count: (a: number) => number;
+    readonly generate_sabr_surface: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number];
     readonly generate_vol_surface: (a: number, b: number, c: number, d: number, e: number) => any;
     readonly get_wasm_memory_size: () => number;
     readonly price_heston_american: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number, number];

@@ -9,6 +9,7 @@ export const dravyaengine_new: () => number;
 export const dravyaengine_sort_colors: (a: number, b: number, c: number, d: any) => [number, number];
 export const dravyaengine_sort_colors_with_history: (a: number, b: number, c: number) => [number, number, number];
 export const dravyaengine_step_count: (a: number) => number;
+export const generate_sabr_surface: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => [number, number, number];
 export const generate_vol_surface: (a: number, b: number, c: number, d: number, e: number) => any;
 export const get_wasm_memory_size: () => number;
 export const price_heston_american: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number, number];
