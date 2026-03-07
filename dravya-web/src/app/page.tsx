@@ -205,6 +205,12 @@ export default function Home() {
         }
     }, [spotPrice, strikePrice, timeToExpiry, riskFreeRate, volatilityParam, treeSteps]);
 
+    useEffect(() => {
+        if (activeMode === 'binomial') {
+            executeBinomialTree();
+        }
+    }, [activeMode, executeBinomialTree]);
+
     const runStressTest = useCallback(async () => {
         setIsRunningBenchmark(true);
         setJsBenchmarkResult(null);
@@ -279,8 +285,16 @@ export default function Home() {
             )}
 
             {activeMode === 'binomial' && (
-                <div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+                <div style={{ display: 'flex', gap: '1.5rem' }}>
+                    <div style={{
+                        width: '240px',
+                        flexShrink: 0,
+                        padding: '1rem',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0',
+                    }}>
+                        <h3 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: '#0f172a' }}>Financial Inputs</h3>
                         <SliderParam label="Spot Price" value={spotPrice} min={10} max={500} step={5} onChange={setSpotPrice} />
                         <SliderParam label="Strike Price" value={strikePrice} min={10} max={500} step={5} onChange={setStrikePrice} />
                         <SliderParam label="Time (years)" value={timeToExpiry} min={0.1} max={5} step={0.1} onChange={setTimeToExpiry} />
@@ -288,16 +302,20 @@ export default function Home() {
                         <SliderParam label="Volatility" value={volatilityParam} min={0.05} max={1.0} step={0.05} onChange={setVolatilityParam} />
                         <SliderParam label="Steps" value={treeSteps} min={2} max={8} step={1} onChange={setTreeSteps} />
                     </div>
-                    <button onClick={executeBinomialTree} style={btnStyle('#10b981')}>Calculate Tree</button>
-                    {binomialResult && (
-                        <div style={{ marginTop: '1rem' }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                        {binomialResult ? (
                             <TreeVisualizer
                                 assetPrices={binomialResult.asset_prices}
                                 optionValues={binomialResult.option_values}
                                 finalPrice={binomialResult.final_price}
+                                strikePrice={strikePrice}
                             />
-                        </div>
-                    )}
+                        ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '480px', backgroundColor: '#f1f5f9', borderRadius: '8px', color: '#94a3b8', fontFamily: 'monospace' }}>
+                                Drag a slider to generate the lattice...
+                            </div>
+                        )}
+                    </div>
                 </div>
             )}
 
