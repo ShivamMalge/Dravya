@@ -14,9 +14,16 @@ export const generate_vol_surface: (a: number, b: number, c: number, d: number, 
 export const get_wasm_memory_size: () => number;
 export const price_heston_american: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number, number];
 export const price_heston_european: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number, number];
+export const price_monte_carlo_gpu: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => any;
 export const sort_colors: (a: number, b: number, c: any) => void;
 export const sort_colors_with_history: (a: number, b: number) => any;
 export const vannaVolgaAdjustment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+export const wasm_bindgen__closure__destroy__h7131eb0a039a573b: (a: number, b: number) => void;
+export const wasm_bindgen__closure__destroy__hbe55809a50a3988a: (a: number, b: number) => void;
+export const wasm_bindgen__convert__closures_____invoke__hd106a83b5e4f55b3: (a: number, b: number, c: any) => [number, number];
+export const wasm_bindgen__convert__closures_____invoke__h1da822864059ccb5: (a: number, b: number, c: any, d: any) => void;
+export const wasm_bindgen__convert__closures_____invoke__h10650f2212ea913d: (a: number, b: number, c: any) => void;
+export const wasm_bindgen__convert__closures_____invoke__h10650f2212ea913d_1: (a: number, b: number, c: any) => void;
 export const __wbindgen_malloc: (a: number, b: number) => number;
 export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
 export const __wbindgen_exn_store: (a: number) => void;

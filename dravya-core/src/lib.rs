@@ -1,5 +1,6 @@
 use wasm_bindgen::prelude::*;
 
+pub mod compute;
 pub mod data;
 pub mod models;
 
@@ -537,6 +538,18 @@ pub fn generate_sabr_surface(
     serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
+
+#[wasm_bindgen]
+pub async fn price_monte_carlo_gpu(
+    spot: f64, strike: f64, time: f64, rate: f64, vol: f64,
+    num_paths: u32, steps: u32, seed: f64
+) -> Result<JsValue, JsValue> {
+    let result = compute::webgpu_engine::dispatch_pricing_kernel(spot, strike, time, rate, vol, num_paths, steps, seed)
+        .await
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+        
+    serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
+}
 
 #[cfg(test)]
 mod tests {

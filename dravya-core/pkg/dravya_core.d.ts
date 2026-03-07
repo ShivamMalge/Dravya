@@ -26,6 +26,8 @@ export function price_heston_american(spot: number, strike: number, time: number
 
 export function price_heston_european(spot: number, strike: number, time: number, rate: number, kappa: number, theta: number, sigma_v: number, rho: number, v0: number, s_steps: number, v_steps: number, t_steps: number): any;
 
+export function price_monte_carlo_gpu(spot: number, strike: number, time: number, rate: number, vol: number, num_paths: number, steps: number, seed: number): Promise<any>;
+
 export function sort_colors(colors: Uint8Array): void;
 
 export function sort_colors_with_history(colors: Uint8Array): any;
@@ -49,9 +51,16 @@ export interface InitOutput {
     readonly get_wasm_memory_size: () => number;
     readonly price_heston_american: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number, number];
     readonly price_heston_european: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number, number];
+    readonly price_monte_carlo_gpu: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number) => any;
     readonly sort_colors: (a: number, b: number, c: any) => void;
     readonly sort_colors_with_history: (a: number, b: number) => any;
     readonly vannaVolgaAdjustment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
+    readonly wasm_bindgen__closure__destroy__h7131eb0a039a573b: (a: number, b: number) => void;
+    readonly wasm_bindgen__closure__destroy__hbe55809a50a3988a: (a: number, b: number) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__hd106a83b5e4f55b3: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen__convert__closures_____invoke__h1da822864059ccb5: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h10650f2212ea913d: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen__convert__closures_____invoke__h10650f2212ea913d_1: (a: number, b: number, c: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;
