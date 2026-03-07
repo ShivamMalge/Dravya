@@ -116,6 +116,52 @@ export function get_wasm_memory_size() {
 }
 
 /**
+ * @param {number} spot
+ * @param {number} strike
+ * @param {number} time
+ * @param {number} rate
+ * @param {number} kappa
+ * @param {number} theta
+ * @param {number} sigma_v
+ * @param {number} rho
+ * @param {number} v0
+ * @param {number} s_steps
+ * @param {number} v_steps
+ * @param {number} t_steps
+ * @returns {any}
+ */
+export function price_heston_american(spot, strike, time, rate, kappa, theta, sigma_v, rho, v0, s_steps, v_steps, t_steps) {
+    const ret = wasm.price_heston_american(spot, strike, time, rate, kappa, theta, sigma_v, rho, v0, s_steps, v_steps, t_steps);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
+ * @param {number} spot
+ * @param {number} strike
+ * @param {number} time
+ * @param {number} rate
+ * @param {number} kappa
+ * @param {number} theta
+ * @param {number} sigma_v
+ * @param {number} rho
+ * @param {number} v0
+ * @param {number} s_steps
+ * @param {number} v_steps
+ * @param {number} t_steps
+ * @returns {any}
+ */
+export function price_heston_european(spot, strike, time, rate, kappa, theta, sigma_v, rho, v0, s_steps, v_steps, t_steps) {
+    const ret = wasm.price_heston_european(spot, strike, time, rate, kappa, theta, sigma_v, rho, v0, s_steps, v_steps, t_steps);
+    if (ret[2]) {
+        throw takeFromExternrefTable0(ret[1]);
+    }
+    return takeFromExternrefTable0(ret[0]);
+}
+
+/**
  * @param {Uint8Array} colors
  */
 export function sort_colors(colors) {

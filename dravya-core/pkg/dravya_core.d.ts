@@ -20,6 +20,10 @@ export function generate_vol_surface(spot: number, rate: number, base_vol: numbe
 
 export function get_wasm_memory_size(): number;
 
+export function price_heston_american(spot: number, strike: number, time: number, rate: number, kappa: number, theta: number, sigma_v: number, rho: number, v0: number, s_steps: number, v_steps: number, t_steps: number): any;
+
+export function price_heston_european(spot: number, strike: number, time: number, rate: number, kappa: number, theta: number, sigma_v: number, rho: number, v0: number, s_steps: number, v_steps: number, t_steps: number): any;
+
 export function sort_colors(colors: Uint8Array): void;
 
 export function sort_colors_with_history(colors: Uint8Array): any;
@@ -38,6 +42,8 @@ export interface InitOutput {
     readonly dravyaengine_step_count: (a: number) => number;
     readonly generate_vol_surface: (a: number, b: number, c: number, d: number, e: number) => any;
     readonly get_wasm_memory_size: () => number;
+    readonly price_heston_american: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number, number];
+    readonly price_heston_european: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number, number];
     readonly sort_colors: (a: number, b: number, c: any) => void;
     readonly sort_colors_with_history: (a: number, b: number) => any;
     readonly __wbindgen_malloc: (a: number, b: number) => number;

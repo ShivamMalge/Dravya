@@ -11,6 +11,8 @@ export const dravyaengine_sort_colors_with_history: (a: number, b: number, c: nu
 export const dravyaengine_step_count: (a: number) => number;
 export const generate_vol_surface: (a: number, b: number, c: number, d: number, e: number) => any;
 export const get_wasm_memory_size: () => number;
+export const price_heston_american: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number, number];
+export const price_heston_european: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number, number];
 export const sort_colors: (a: number, b: number, c: any) => void;
 export const sort_colors_with_history: (a: number, b: number) => any;
 export const __wbindgen_malloc: (a: number, b: number) => number;

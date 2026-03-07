@@ -5,6 +5,7 @@ use std::fmt;
 pub enum DravyaError {
     InvalidCsvFormat { row_number: usize, detail: String },
     EmptyCsvInput,
+    StabilityViolation(String),
 }
 
 impl fmt::Display for DravyaError {
@@ -14,6 +15,7 @@ impl fmt::Display for DravyaError {
                 write!(f, "Invalid CSV at row {}: {}", row_number, detail)
             }
             DravyaError::EmptyCsvInput => write!(f, "Empty CSV input"),
+            DravyaError::StabilityViolation(msg) => write!(f, "Stability Violation: {}", msg),
         }
     }
 }

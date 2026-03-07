@@ -1,6 +1,7 @@
 use wasm_bindgen::prelude::*;
 
 pub mod data;
+pub mod models;
 
 #[derive(Clone)]
 pub enum EngineError {
@@ -445,6 +446,31 @@ pub fn batch_calculate_implied_volatility(csv_content: &str) -> Result<Vec<f64>,
     data::batch_calculate_iv(csv_content, newton_raphson_iv)
         .map_err(|e| JsValue::from_str(&e.to_string()))
 }
+
+#[wasm_bindgen]
+pub fn price_heston_european(
+    spot: f64, strike: f64, time: f64, rate: f64,
+    kappa: f64, theta: f64, sigma_v: f64, rho: f64, v0: f64,
+    s_steps: usize, v_steps: usize, t_steps: usize
+) -> Result<JsValue, JsValue> {
+    let params = models::heston::HestonParams { kappa, theta, sigma_v, rho, v0 };
+    let result = models::heston::solve_heston_fdm(spot, strike, time, rate, &params, false, s_steps, v_steps, t_steps)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
+#[wasm_bindgen]
+pub fn price_heston_american(
+    spot: f64, strike: f64, time: f64, rate: f64,
+    kappa: f64, theta: f64, sigma_v: f64, rho: f64, v0: f64,
+    s_steps: usize, v_steps: usize, t_steps: usize
+) -> Result<JsValue, JsValue> {
+    let params = models::heston::HestonParams { kappa, theta, sigma_v, rho, v0 };
+    let result = models::heston::solve_heston_fdm(spot, strike, time, rate, &params, true, s_steps, v_steps, t_steps)
+        .map_err(|e| JsValue::from_str(&e.to_string()))?;
+    serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
 
 #[cfg(test)]
 mod tests {
