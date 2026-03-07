@@ -2,11 +2,12 @@
 name = "dravya-core"
 version = "0.1.0"
 edition = "2021"
-description = "High-performance algorithmic visualization engine with WebAssembly support"
+description = "High-performance WASM-backed algorithmic and quantitative risk engine"
 repository = "https://github.com/ShivamMalge/Dravya"
 license = "MIT"
-keywords = ["wasm", "algorithms", "visualization", "sorting", "webassembly"]
-categories = ["algorithms", "wasm", "visualization"]
+readme = "README.md"
+keywords = ["wasm", "algorithms", "quantitative-finance", "options-pricing", "webassembly"]
+categories = ["algorithms", "wasm", "finance"]
 
 [lib]
 crate-type = ["cdylib", "rlib"]

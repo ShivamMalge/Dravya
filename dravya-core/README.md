@@ -1,8 +1,17 @@
 # dravya-core
 
-High-performance algorithmic visualization engine with WebAssembly support.
+High-performance WASM-backed algorithmic and quantitative risk engine.
 
-## Install
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Crates.io](https://img.shields.io/crates/v/dravya-core)](https://crates.io/crates/dravya-core)
+
+## Installation
+
+### npm (WebAssembly)
+
+```bash
+npm install @dravya/core
+```
 
 ### Cargo (Rust)
 
@@ -11,57 +20,121 @@ High-performance algorithmic visualization engine with WebAssembly support.
 dravya-core = "0.1.0"
 ```
 
-### npm (WASM)
+## API Reference
+
+### Sorting Engine
+
+Dutch National Flag algorithm with step-by-step history capture.
+
+```javascript
+import init, { sort_colors, sort_colors_with_history, DravyaEngine } from '@dravya/core';
+
+await init();
+
+const colors = new Uint8Array([2, 0, 1, 2, 1, 0]);
+sort_colors(colors);
+
+const history = sort_colors_with_history(new Uint8Array([2, 0, 1, 2, 1, 0]));
+
+const engine = new DravyaEngine();
+engine.sort_colors(colors);
+const stepCount = engine.step_count();
+engine.free();
+```
+
+### Option Pricing & Greeks
+
+Cox-Ross-Rubinstein binomial tree with Delta (Δ), Gamma (Γ), and Theta (Θ).
+
+```javascript
+import init, { calculate_binomial_tree } from '@dravya/core';
+
+await init();
+
+const result = calculate_binomial_tree(
+    100.0,
+    100.0,
+    1.0,
+    0.05,
+    0.2,
+    5
+);
+
+const optionPrice = result.final_price;
+const delta = result.greeks.delta;
+const gamma = result.greeks.gamma;
+const theta = result.greeks.theta;
+const assetLattice = result.asset_prices;
+const optionLattice = result.option_values;
+```
+
+### Implied Volatility Solver
+
+Newton-Raphson root-finding for Black-Scholes implied volatility.
+
+```javascript
+import init, { calculate_implied_volatility } from '@dravya/core';
+
+await init();
+
+const impliedVol = calculate_implied_volatility(
+    10.45,
+    100.0,
+    100.0,
+    1.0,
+    0.05
+);
+```
+
+### Volatility Surface Generation
+
+3D implied volatility surface over a Strike × Time grid.
+
+```javascript
+import init, { generate_vol_surface } from '@dravya/core';
+
+await init();
+
+const surface = generate_vol_surface(
+    100.0,
+    0.05,
+    0.25,
+    15,
+    15
+);
+
+const ivGrid = surface.implied_vol_grid;
+const strikes = surface.strike_axis;
+const times = surface.time_axis;
+const rows = surface.grid_rows;
+const cols = surface.grid_cols;
+```
+
+### Memory Introspection
+
+```javascript
+import init, { get_wasm_memory_size } from '@dravya/core';
+
+await init();
+
+const wasmBufferByteLength = get_wasm_memory_size();
+```
+
+## Exported Types
+
+| Type | Fields |
+|------|--------|
+| `DravyaEngine` | Stateful engine with `sort_colors()`, `sort_colors_with_history()`, `step_count()` |
+| `PricingResult` | `asset_prices`, `option_values`, `backward_steps`, `final_price`, `greeks` |
+| `Greeks` | `delta`, `gamma`, `theta` |
+| `VolSurfaceResult` | `implied_vol_grid`, `strike_axis`, `time_axis`, `grid_rows`, `grid_cols` |
+
+## Building from Source
 
 ```bash
-npm install @dravya/core
+cargo install wasm-pack
+wasm-pack build --target web
 ```
-
-## Usage
-
-### WASM (Browser)
-
-```javascript
-import init, { sort_colors_with_history } from '@dravya/core';
-
-await init();
-const history = sort_colors_with_history(new Uint8Array([2, 0, 1, 2, 1, 0]));
-```
-
-`history` is a 2D array where each element is a snapshot of the array after every swap operation — perfect for step-by-step visualization.
-
-### WASM (Stateful Engine)
-
-```javascript
-import init, { DravyaEngine } from '@dravya/core';
-
-await init();
-const engine = new DravyaEngine();
-const history = engine.sort_colors_with_history(new Uint8Array([2, 0, 1, 2, 1, 0]));
-console.log(engine.step_count());
-```
-
-### Rust (Native)
-
-```rust
-use dravya_core::DravyaEngine;
-
-let mut engine = DravyaEngine::new();
-let mut arr = vec![2, 0, 1, 2, 1, 0];
-engine.sort_colors(&mut arr).unwrap();
-assert_eq!(arr, vec![0, 0, 1, 1, 2, 2]);
-```
-
-## API
-
-| Function | Description |
-|---|---|
-| `sort_colors(colors)` | In-place Dutch National Flag sort |
-| `sort_colors_with_history(colors)` | Returns full swap history as 2D array |
-| `DravyaEngine::new()` | Stateful engine constructor |
-| `DravyaEngine::sort_colors(colors)` | Stateful in-place sort with validation |
-| `DravyaEngine::sort_colors_with_history(colors)` | Stateful sort returning history |
-| `DravyaEngine::step_count()` | Number of steps in last history |
 
 ## License
 
