@@ -1,3 +1,4 @@
+#![feature(portable_simd)]
 use wasm_bindgen::prelude::*;
 
 pub mod compute;
@@ -292,7 +293,7 @@ pub fn calculate_binomial_tree(
     serde_wasm_bindgen::to_value(&result).unwrap_or(JsValue::NULL)
 }
 
-fn standard_normal_cdf(x: f64) -> f64 {
+pub fn standard_normal_cdf(x: f64) -> f64 {
     let a1 = 0.254829592;
     let a2 = -0.284496736;
     let a3 = 1.421413741;
@@ -540,15 +541,67 @@ pub fn generate_sabr_surface(
 
 
 #[wasm_bindgen]
+pub fn deterministicSeedLog(seed: f64) {
+    web_sys::console::log_1(&format!("AUDIT_TRACE: Monte Carlo Engine initialized with deterministic PRNG Seed: {}", seed).into());
+}
+
+#[wasm_bindgen]
 pub async fn price_monte_carlo_gpu(
     spot: f64, strike: f64, time: f64, rate: f64, vol: f64,
     num_paths: u32, steps: u32, seed: f64
 ) -> Result<JsValue, JsValue> {
+    deterministicSeedLog(seed);
+    
     let result = compute::webgpu_engine::dispatch_pricing_kernel(spot, strike, time, rate, vol, num_paths, steps, seed)
         .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
         
     serde_wasm_bindgen::to_value(&result).map_err(|e| JsValue::from_str(&e.to_string()))
+}
+
+#[derive(serde::Serialize)]
+pub struct BenchmarkResult {
+    pub scalar_ms: f64,
+    pub simd_ms: f64,
+}
+
+#[wasm_bindgen]
+pub fn benchmark_simd_greeks(
+    spot: f64, strike: f64, time: f64, rate: f64, vol: f64,
+    batch_size: u32
+) -> Result<JsValue, JsValue> {
+    
+    // Benchmark Scalar
+    let start_scalar = web_sys::window().unwrap().performance().unwrap().now();
+    for _ in 0..batch_size {
+        let _ = bs_vanna(spot, strike, time, rate, vol);
+        let _ = bs_vega(spot, strike, time, rate, vol);
+    }
+    let end_scalar = web_sys::window().unwrap().performance().unwrap().now();
+    
+    // Benchmark SIMD
+    let start_simd = web_sys::window().unwrap().performance().unwrap().now();
+    
+    use core::simd::f64x2;
+    let s_reg = f64x2::from_array([spot, spot]);
+    let k_reg = f64x2::from_array([strike, strike]);
+    let t_reg = f64x2::from_array([time, time]);
+    let r_reg = f64x2::from_array([rate, rate]);
+    let v_reg = f64x2::from_array([vol, vol]);
+    
+    // Process pairs of data elements manually using SIMD Vector Registers mapping loop
+    let loops = batch_size / 2;
+    for _ in 0..loops {
+        let _ = compute::simd_ops::simd_batch_greeks(s_reg, k_reg, t_reg, r_reg, v_reg);
+    }
+    let end_simd = web_sys::window().unwrap().performance().unwrap().now();
+    
+    let res = BenchmarkResult {
+        scalar_ms: end_scalar - start_scalar,
+        simd_ms: end_simd - start_simd,
+    };
+    
+    serde_wasm_bindgen::to_value(&res).map_err(|e| JsValue::from_str(&e.to_string()))
 }
 
 #[cfg(test)]

@@ -12,9 +12,13 @@ export class DravyaEngine {
 
 export function batch_calculate_implied_volatility(csv_content: string): Float64Array;
 
+export function benchmark_simd_greeks(spot: number, strike: number, time: number, rate: number, vol: number, batch_size: number): any;
+
 export function calculate_binomial_tree(spot_price: number, strike_price: number, time_to_expiry: number, risk_free_rate: number, volatility: number, steps: number): any;
 
 export function calculate_implied_volatility(market_price: number, spot: number, strike: number, time: number, rate: number): number;
+
+export function deterministicSeedLog(seed: number): void;
 
 export function generate_sabr_surface(spot: number, rate: number, alpha: number, beta: number, rho: number, nu: number, strike_points: number, time_points: number): any;
 
@@ -40,8 +44,10 @@ export interface InitOutput {
     readonly memory: WebAssembly.Memory;
     readonly __wbg_dravyaengine_free: (a: number, b: number) => void;
     readonly batch_calculate_implied_volatility: (a: number, b: number) => [number, number, number, number];
+    readonly benchmark_simd_greeks: (a: number, b: number, c: number, d: number, e: number, f: number) => [number, number, number];
     readonly calculate_binomial_tree: (a: number, b: number, c: number, d: number, e: number, f: number) => any;
     readonly calculate_implied_volatility: (a: number, b: number, c: number, d: number, e: number) => number;
+    readonly deterministicSeedLog: (a: number) => void;
     readonly dravyaengine_new: () => number;
     readonly dravyaengine_sort_colors: (a: number, b: number, c: number, d: any) => [number, number];
     readonly dravyaengine_sort_colors_with_history: (a: number, b: number, c: number) => [number, number, number];
@@ -55,12 +61,12 @@ export interface InitOutput {
     readonly sort_colors: (a: number, b: number, c: any) => void;
     readonly sort_colors_with_history: (a: number, b: number) => any;
     readonly vannaVolgaAdjustment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
-    readonly wasm_bindgen__closure__destroy__h7131eb0a039a573b: (a: number, b: number) => void;
-    readonly wasm_bindgen__closure__destroy__hbe55809a50a3988a: (a: number, b: number) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__hd106a83b5e4f55b3: (a: number, b: number, c: any) => [number, number];
-    readonly wasm_bindgen__convert__closures_____invoke__h1da822864059ccb5: (a: number, b: number, c: any, d: any) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h10650f2212ea913d: (a: number, b: number, c: any) => void;
-    readonly wasm_bindgen__convert__closures_____invoke__h10650f2212ea913d_1: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen_f8c8a67a8616b055___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__wasm_bindgen_f8c8a67a8616b055___JsValue____Output_______: (a: number, b: number) => void;
+    readonly wasm_bindgen_f8c8a67a8616b055___closure__destroy___dyn_core_2be32f71e062320c___ops__function__FnMut__wasm_bindgen_f8c8a67a8616b055___JsValue____Output___core_2be32f71e062320c___result__Result_____wasm_bindgen_f8c8a67a8616b055___JsError___: (a: number, b: number) => void;
+    readonly wasm_bindgen_f8c8a67a8616b055___convert__closures_____invoke___wasm_bindgen_f8c8a67a8616b055___JsValue__core_2be32f71e062320c___result__Result_____wasm_bindgen_f8c8a67a8616b055___JsError___true_: (a: number, b: number, c: any) => [number, number];
+    readonly wasm_bindgen_f8c8a67a8616b055___convert__closures_____invoke___js_sys_1260de572ff683ed___Function_fn_wasm_bindgen_f8c8a67a8616b055___JsValue_____wasm_bindgen_f8c8a67a8616b055___sys__Undefined___js_sys_1260de572ff683ed___Function_fn_wasm_bindgen_f8c8a67a8616b055___JsValue_____wasm_bindgen_f8c8a67a8616b055___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
+    readonly wasm_bindgen_f8c8a67a8616b055___convert__closures_____invoke___wasm_bindgen_f8c8a67a8616b055___JsValue______true_: (a: number, b: number, c: any) => void;
+    readonly wasm_bindgen_f8c8a67a8616b055___convert__closures_____invoke___wasm_bindgen_f8c8a67a8616b055___JsValue______true__1: (a: number, b: number, c: any) => void;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

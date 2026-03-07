@@ -26,4 +26,4 @@ futures-channel = "0.3"
 
 [dependencies.web-sys]
 version = "0.3"
-features = ["Window", "Performance"]
+features = ["Window", "Performance", "console"]
