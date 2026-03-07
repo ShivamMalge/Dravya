@@ -141,11 +141,19 @@ fn dutch_national_flag_history(colors: &[u8]) -> Vec<Vec<u8>> {
 use serde::Serialize;
 
 #[derive(Serialize, Clone)]
-pub struct BinomialTreeResult {
+pub struct Greeks {
+    pub delta: f64,
+    pub gamma: f64,
+    pub theta: f64,
+}
+
+#[derive(Serialize, Clone)]
+pub struct PricingResult {
     pub asset_prices: Vec<Vec<f64>>,
     pub option_values: Vec<Vec<f64>>,
     pub backward_steps: Vec<Vec<Vec<f64>>>,
     pub final_price: f64,
+    pub greeks: Greeks,
 }
 
 fn binomial_tree_european_call(
@@ -155,13 +163,13 @@ fn binomial_tree_european_call(
     risk_free_rate: f64,
     volatility: f64,
     steps: usize,
-) -> BinomialTreeResult {
-    let delta_t = time_to_expiry / steps as f64;
-    let upside_factor = (volatility * delta_t.sqrt()).exp();
+) -> PricingResult {
+    let time_step_delta = time_to_expiry / steps as f64;
+    let upside_factor = (volatility * time_step_delta.sqrt()).exp();
     let downside_factor = 1.0 / upside_factor;
-    let discount_factor = (-risk_free_rate * delta_t).exp();
-    let upside_probability = ((risk_free_rate * delta_t).exp() - downside_factor) / (upside_factor - downside_factor);
-    let downside_probability = 1.0 - upside_probability;
+    let discount_factor = (-risk_free_rate * time_step_delta).exp();
+    let risk_neutral_prob = ((risk_free_rate * time_step_delta).exp() - downside_factor) / (upside_factor - downside_factor);
+    let down_probability = 1.0 - risk_neutral_prob;
 
     let mut asset_prices: Vec<Vec<f64>> = Vec::with_capacity(steps + 1);
     for step in 0..=steps {
@@ -192,8 +200,8 @@ fn binomial_tree_european_call(
         let mut level_values: Vec<f64> = Vec::with_capacity(step + 1);
         for node in 0..=step {
             let discounted_value = discount_factor
-                * (upside_probability * option_grid[step + 1][node]
-                    + downside_probability * option_grid[step + 1][node + 1]);
+                * (risk_neutral_prob * option_grid[step + 1][node]
+                    + down_probability * option_grid[step + 1][node + 1]);
             level_values.push((discounted_value * 1e6).round() / 1e6);
         }
         option_grid[step] = level_values;
@@ -202,11 +210,58 @@ fn binomial_tree_european_call(
 
     let final_price = option_grid[0][0];
 
-    BinomialTreeResult {
+    let node_value_up = if option_grid[1].len() > 0 { option_grid[1][0] } else { 0.0 };
+    let node_value_down = if option_grid[1].len() > 1 { option_grid[1][1] } else { 0.0 };
+    let asset_up = if asset_prices[1].len() > 0 { asset_prices[1][0] } else { spot_price };
+    let asset_down = if asset_prices[1].len() > 1 { asset_prices[1][1] } else { spot_price };
+
+    let asset_spread = asset_up - asset_down;
+    let delta = if asset_spread.abs() > 1e-12 {
+        (node_value_up - node_value_down) / asset_spread
+    } else {
+        0.0
+    };
+
+    let gamma = if steps >= 2 && option_grid[2].len() >= 3 {
+        let node_value_uu = option_grid[2][0];
+        let node_value_ud = option_grid[2][1];
+        let node_value_dd = option_grid[2][2];
+        let asset_uu = asset_prices[2][0];
+        let asset_ud = asset_prices[2][1];
+        let asset_dd = asset_prices[2][2];
+
+        let delta_up = if (asset_uu - asset_ud).abs() > 1e-12 {
+            (node_value_uu - node_value_ud) / (asset_uu - asset_ud)
+        } else { 0.0 };
+        let delta_down = if (asset_ud - asset_dd).abs() > 1e-12 {
+            (node_value_ud - node_value_dd) / (asset_ud - asset_dd)
+        } else { 0.0 };
+
+        let h = (asset_uu - asset_dd) / 2.0;
+        if h.abs() > 1e-12 { (delta_up - delta_down) / h } else { 0.0 }
+    } else {
+        0.0
+    };
+
+    let theta = if steps >= 2 && option_grid[2].len() >= 2 {
+        let node_value_mid = option_grid[2][1];
+        (node_value_mid - final_price) / (2.0 * time_step_delta)
+    } else {
+        0.0
+    };
+
+    let greeks = Greeks {
+        delta: (delta * 1e6).round() / 1e6,
+        gamma: (gamma * 1e6).round() / 1e6,
+        theta: (theta * 1e6).round() / 1e6,
+    };
+
+    PricingResult {
         asset_prices,
         option_values: option_grid,
         backward_steps,
         final_price: (final_price * 1e6).round() / 1e6,
+        greeks,
     }
 }
 

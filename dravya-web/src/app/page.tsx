@@ -6,14 +6,22 @@ import { runJsBenchmark, runWasmBenchmark, BenchmarkResult } from '../utils/benc
 
 const Visualizer = dynamic(() => import('../components/Visualizer'), { ssr: false });
 const TreeVisualizer = dynamic(() => import('../components/TreeVisualizer'), { ssr: false });
+const RiskDashboard = dynamic(() => import('../components/RiskDashboard'), { ssr: false });
 
 type DashboardMode = 'sort' | 'binomial' | 'diagnostics';
+
+interface GreeksData {
+    delta: number;
+    gamma: number;
+    theta: number;
+}
 
 interface BinomialResult {
     asset_prices: number[][];
     option_values: number[][];
     backward_steps: number[][][];
     final_price: number;
+    greeks: GreeksData;
 }
 
 function generateShuffledArray(length: number): number[] {
@@ -52,11 +60,11 @@ function jsFallbackBinomialTree(
     volatility: number,
     steps: number
 ): BinomialResult {
-    const deltaT = timeToExpiry / steps;
-    const upsideFactor = Math.exp(volatility * Math.sqrt(deltaT));
+    const timeStepDelta = timeToExpiry / steps;
+    const upsideFactor = Math.exp(volatility * Math.sqrt(timeStepDelta));
     const downsideFactor = 1.0 / upsideFactor;
-    const discountFactor = Math.exp(-riskFreeRate * deltaT);
-    const upsideProbability = (Math.exp(riskFreeRate * deltaT) - downsideFactor) / (upsideFactor - downsideFactor);
+    const discountFactor = Math.exp(-riskFreeRate * timeStepDelta);
+    const riskNeutralProb = (Math.exp(riskFreeRate * timeStepDelta) - downsideFactor) / (upsideFactor - downsideFactor);
 
     const assetPrices: number[][] = [];
     for (let step = 0; step <= steps; step++) {
@@ -78,8 +86,8 @@ function jsFallbackBinomialTree(
         const levelValues: number[] = [];
         for (let node = 0; node <= step; node++) {
             const discountedValue = discountFactor * (
-                upsideProbability * optionGrid[step + 1][node] +
-                (1 - upsideProbability) * optionGrid[step + 1][node + 1]
+                riskNeutralProb * optionGrid[step + 1][node] +
+                (1 - riskNeutralProb) * optionGrid[step + 1][node + 1]
             );
             levelValues.push(Math.round(discountedValue * 1e6) / 1e6);
         }
@@ -87,11 +95,44 @@ function jsFallbackBinomialTree(
         backwardSteps.push(optionGrid[step].map(v => [v]));
     }
 
+    const finalPrice = optionGrid[0][0];
+
+    const nodeValueUp = optionGrid[1]?.[0] ?? 0;
+    const nodeValueDown = optionGrid[1]?.[1] ?? 0;
+    const assetUp = assetPrices[1]?.[0] ?? spotPrice;
+    const assetDown = assetPrices[1]?.[1] ?? spotPrice;
+    const assetSpread = assetUp - assetDown;
+    const delta = Math.abs(assetSpread) > 1e-12 ? (nodeValueUp - nodeValueDown) / assetSpread : 0;
+
+    let gamma = 0;
+    if (steps >= 2 && optionGrid[2]?.length >= 3) {
+        const nodeValueUU = optionGrid[2][0];
+        const nodeValueUD = optionGrid[2][1];
+        const nodeValueDD = optionGrid[2][2];
+        const assetUU = assetPrices[2][0];
+        const assetUD = assetPrices[2][1];
+        const assetDD = assetPrices[2][2];
+        const deltaUp = Math.abs(assetUU - assetUD) > 1e-12 ? (nodeValueUU - nodeValueUD) / (assetUU - assetUD) : 0;
+        const deltaDown = Math.abs(assetUD - assetDD) > 1e-12 ? (nodeValueUD - nodeValueDD) / (assetUD - assetDD) : 0;
+        const h = (assetUU - assetDD) / 2;
+        gamma = Math.abs(h) > 1e-12 ? (deltaUp - deltaDown) / h : 0;
+    }
+
+    let theta = 0;
+    if (steps >= 2 && optionGrid[2]?.length >= 2) {
+        theta = (optionGrid[2][1] - finalPrice) / (2 * timeStepDelta);
+    }
+
     return {
         asset_prices: assetPrices,
         option_values: optionGrid,
         backward_steps: backwardSteps,
-        final_price: Math.round(optionGrid[0][0] * 1e6) / 1e6,
+        final_price: Math.round(finalPrice * 1e6) / 1e6,
+        greeks: {
+            delta: Math.round(delta * 1e6) / 1e6,
+            gamma: Math.round(gamma * 1e6) / 1e6,
+            theta: Math.round(theta * 1e6) / 1e6,
+        },
     };
 }
 
@@ -301,6 +342,9 @@ export default function Home() {
                         <SliderParam label="Risk-Free Rate" value={riskFreeRate} min={0.01} max={0.2} step={0.01} onChange={setRiskFreeRate} />
                         <SliderParam label="Volatility" value={volatilityParam} min={0.05} max={1.0} step={0.05} onChange={setVolatilityParam} />
                         <SliderParam label="Steps" value={treeSteps} min={2} max={8} step={1} onChange={setTreeSteps} />
+                        {binomialResult && (
+                            <RiskDashboard greeks={binomialResult.greeks} />
+                        )}
                     </div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                         {binomialResult ? (
