@@ -4,5 +4,4 @@ dist/
 .env
 .DS_Store
 target/
-dravya-core/pkg/
 Cargo.lock

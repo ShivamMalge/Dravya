@@ -1,0 +1,28 @@
+{
+  "name": "dravya-core",
+  "type": "module",
+  "description": "High-performance algorithmic visualization engine with WebAssembly support",
+  "version": "0.1.0",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ShivamMalge/Dravya"
+  },
+  "files": [
+    "dravya_core_bg.wasm",
+    "dravya_core.js",
+    "dravya_core.d.ts"
+  ],
+  "main": "dravya_core.js",
+  "types": "dravya_core.d.ts",
+  "sideEffects": [
+    "./snippets/*"
+  ],
+  "keywords": [
+    "wasm",
+    "algorithms",
+    "visualization",
+    "sorting",
+    "webassembly"
+  ]
+}
