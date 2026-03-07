@@ -200,6 +200,21 @@ export function sort_colors_with_history(colors) {
     return ret;
 }
 
+/**
+ * @param {number} spot
+ * @param {number} strike
+ * @param {number} time
+ * @param {number} rate
+ * @param {number} vol_atm
+ * @param {number} vol_rr
+ * @param {number} vol_bf
+ * @returns {number}
+ */
+export function vannaVolgaAdjustment(spot, strike, time, rate, vol_atm, vol_rr, vol_bf) {
+    const ret = wasm.vannaVolgaAdjustment(spot, strike, time, rate, vol_atm, vol_rr, vol_bf);
+    return ret;
+}
+
 function __wbg_get_imports() {
     const import0 = {
         __proto__: null,

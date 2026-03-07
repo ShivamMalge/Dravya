@@ -30,6 +30,8 @@ export function sort_colors(colors: Uint8Array): void;
 
 export function sort_colors_with_history(colors: Uint8Array): any;
 
+export function vannaVolgaAdjustment(spot: number, strike: number, time: number, rate: number, vol_atm: number, vol_rr: number, vol_bf: number): number;
+
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
@@ -49,6 +51,7 @@ export interface InitOutput {
     readonly price_heston_european: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number, number];
     readonly sort_colors: (a: number, b: number, c: any) => void;
     readonly sort_colors_with_history: (a: number, b: number) => any;
+    readonly vannaVolgaAdjustment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
     readonly __wbindgen_malloc: (a: number, b: number) => number;
     readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
     readonly __wbindgen_exn_store: (a: number) => void;

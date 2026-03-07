@@ -16,6 +16,7 @@ export const price_heston_american: (a: number, b: number, c: number, d: number,
 export const price_heston_european: (a: number, b: number, c: number, d: number, e: number, f: number, g: number, h: number, i: number, j: number, k: number, l: number) => [number, number, number];
 export const sort_colors: (a: number, b: number, c: any) => void;
 export const sort_colors_with_history: (a: number, b: number) => any;
+export const vannaVolgaAdjustment: (a: number, b: number, c: number, d: number, e: number, f: number, g: number) => number;
 export const __wbindgen_malloc: (a: number, b: number) => number;
 export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
 export const __wbindgen_exn_store: (a: number) => void;

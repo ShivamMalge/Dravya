@@ -127,6 +127,14 @@ pub fn solve_heston_fdm(
         option_values: vec![vec![final_option_price]],
         backward_steps: vec![],
         final_price: final_option_price,
-        greeks: Greeks { delta, gamma, theta },
+        greeks: Greeks { 
+            delta, 
+            gamma, 
+            theta, 
+            vanna: 0.0, 
+            volga: 0.0, 
+            charm: 0.0, 
+            color: 0.0 
+        },
     })
 }

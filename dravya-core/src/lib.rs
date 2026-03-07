@@ -148,6 +148,10 @@ pub struct Greeks {
     pub delta: f64,
     pub gamma: f64,
     pub theta: f64,
+    pub vanna: f64,
+    pub volga: f64,
+    pub charm: f64,
+    pub color: f64,
 }
 
 #[derive(Serialize, Clone)]
@@ -257,6 +261,10 @@ fn binomial_tree_european_call(
         delta: (delta * 1e6).round() / 1e6,
         gamma: (gamma * 1e6).round() / 1e6,
         theta: (theta * 1e6).round() / 1e6,
+        vanna: bs_vanna(spot_price, strike_price, time_to_expiry, risk_free_rate, volatility),
+        volga: bs_volga(spot_price, strike_price, time_to_expiry, risk_free_rate, volatility),
+        charm: bs_charm(spot_price, strike_price, time_to_expiry, risk_free_rate, volatility),
+        color: bs_color(spot_price, strike_price, time_to_expiry, risk_free_rate, volatility),
     };
 
     PricingResult {
@@ -316,6 +324,48 @@ fn bs_vega(spot: f64, strike: f64, time: f64, rate: f64, vol: f64) -> f64 {
     }
     let d1 = ((spot / strike).ln() + (rate + 0.5 * vol * vol) * time) / (vol * time.sqrt());
     spot * standard_normal_pdf(d1) * time.sqrt()
+}
+
+fn bs_vanna(spot: f64, strike: f64, time: f64, rate: f64, vol: f64) -> f64 {
+    if time <= 0.0 || vol <= 0.0 { return 0.0; }
+    let d1 = ((spot / strike).ln() + (rate + 0.5 * vol * vol) * time) / (vol * time.sqrt());
+    let d2 = d1 - vol * time.sqrt();
+    -standard_normal_pdf(d1) * d2 / vol
+}
+
+fn bs_volga(spot: f64, strike: f64, time: f64, rate: f64, vol: f64) -> f64 {
+    if time <= 0.0 || vol <= 0.0 { return 0.0; }
+    let d1 = ((spot / strike).ln() + (rate + 0.5 * vol * vol) * time) / (vol * time.sqrt());
+    let d2 = d1 - vol * time.sqrt();
+    bs_vega(spot, strike, time, rate, vol) * d1 * d2 / vol
+}
+
+fn bs_charm(spot: f64, strike: f64, time: f64, rate: f64, vol: f64) -> f64 {
+    if time <= 0.0 || vol <= 0.0 { return 0.0; }
+    let d1 = ((spot / strike).ln() + (rate + 0.5 * vol * vol) * time) / (vol * time.sqrt());
+    let d2 = d1 - vol * time.sqrt();
+    -standard_normal_pdf(d1) * (rate / (vol * time.sqrt()) - d2 / (2.0 * time))
+}
+
+fn bs_color(spot: f64, strike: f64, time: f64, rate: f64, vol: f64) -> f64 {
+    if time <= 0.0 || vol <= 0.0 { return 0.0; }
+    let d1 = ((spot / strike).ln() + (rate + 0.5 * vol * vol) * time) / (vol * time.sqrt());
+    let d2 = d1 - vol * time.sqrt();
+    -standard_normal_pdf(d1) / (2.0 * spot * time * vol * time.sqrt()) 
+        * (1.0 + (2.0 * rate * time - d2 * vol * time.sqrt()) * d1 / (vol * time.sqrt()))
+}
+
+#[wasm_bindgen]
+pub fn vannaVolgaAdjustment(
+    spot: f64, strike: f64, time: f64, rate: f64,
+    vol_atm: f64, vol_rr: f64, vol_bf: f64
+) -> f64 {
+    let ln_k = (strike / spot).ln();
+    let skew_effect = vol_rr * ln_k;
+    let smile_effect = vol_bf * ln_k * ln_k;
+    let adjusted_vol = (vol_atm + skew_effect + smile_effect).max(0.001);
+    
+    bs_call_price(spot, strike, time, rate, adjusted_vol)
 }
 
 fn newton_raphson_iv(
