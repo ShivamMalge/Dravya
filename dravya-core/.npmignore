@@ -1,0 +1,15 @@
+node_modules
+target
+tests
+dravya-web
+dravya-server
+dravya-test
+.git
+.gitignore
+.cargo
+rust-toolchain.toml
+package-log.json
+pnpm-lock.yaml
+*.tgz
+*.zip
+*.tar.gz

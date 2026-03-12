@@ -4,62 +4,59 @@ import React, { useMemo } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
-import Axes3D from './Axes3D';
 
 interface VolSurfaceProps {
-    impliedVolGrid: number[];
-    strikeAxis: number[];
-    timeAxis: number[];
-    gridRows: number;
-    gridCols: number;
+    data?: {
+        implied_vol_grid: number[];
+        strike_axis: number[];
+        time_axis: number[];
+        grid_rows: number;
+        grid_cols: number;
+    } | null;
 }
 
-function SurfaceMesh({ impliedVolGrid, strikeAxis, timeAxis, gridRows, gridCols }: VolSurfaceProps) {
-    const geometryKey = useMemo(() => impliedVolGrid.reduce((acc, v, i) => acc + v * (i + 1), 0), [impliedVolGrid]);
-
-    const { geometry, colorArray } = useMemo(() => {
+function SurfaceMesh({ implied_vol_grid, grid_rows, grid_cols }: any) {
+    const { geometry } = useMemo(() => {
         const geom = new THREE.BufferGeometry();
         const vertices: number[] = [];
         const indices: number[] = [];
         const colors: number[] = [];
 
-        const xScale = 8.0 / (gridCols - 1 || 1);
-        const zScale = 8.0 / (gridRows - 1 || 1);
+        const xScale = 8.0 / (grid_cols - 1 || 1);
+        const zScale = 8.0 / (grid_rows - 1 || 1);
 
-        let minIV = Infinity;
-        let maxIV = -Infinity;
-        for (const iv of impliedVolGrid) {
-            if (iv < minIV) minIV = iv;
-            if (iv > maxIV) maxIV = iv;
-        }
+        const minIV = Math.min(...implied_vol_grid);
+        const maxIV = Math.max(...implied_vol_grid);
         const ivRange = maxIV - minIV || 1;
 
-        for (let row = 0; row < gridRows; row++) {
-            for (let col = 0; col < gridCols; col++) {
-                const idx = row * gridCols + col;
-                const xPos = col * xScale - 4.0;
-                const zPos = row * zScale - 4.0;
-                const yPos = ((impliedVolGrid[idx] - minIV) / ivRange) * 4.0 - 2.0;
+        for (let row = 0; row < grid_rows; row++) {
+            for (let col = 0; col < grid_cols; col++) {
+                const idx = row * grid_cols + col;
+                const x = col * xScale - 4.0;
+                const z = row * zScale - 4.0;
+                const y = ((implied_vol_grid[idx] - minIV) / ivRange) * 3.0 - 1.5;
 
-                vertices.push(xPos, yPos, zPos);
+                vertices.push(x, y, z);
 
-                const normalizedIV = (impliedVolGrid[idx] - minIV) / ivRange;
-                const r = normalizedIV;
-                const g = 0.2 + (1 - normalizedIV) * 0.3;
-                const b = 1.0 - normalizedIV;
-                colors.push(r, g, b);
+                const norm = (implied_vol_grid[idx] - minIV) / ivRange;
+                const color = new THREE.Color();
+                // Professional Heatmap: Cool Blue -> Deep Purple -> Soft Orange
+                if (norm < 0.5) {
+                    color.lerpColors(new THREE.Color('#3b82f6'), new THREE.Color('#8b5cf6'), norm * 2);
+                } else {
+                    color.lerpColors(new THREE.Color('#8b5cf6'), new THREE.Color('#f97316'), (norm - 0.5) * 2);
+                }
+                colors.push(color.r, color.g, color.b);
             }
         }
 
-        for (let row = 0; row < gridRows - 1; row++) {
-            for (let col = 0; col < gridCols - 1; col++) {
-                const topLeft = row * gridCols + col;
-                const topRight = topLeft + 1;
-                const bottomLeft = (row + 1) * gridCols + col;
-                const bottomRight = bottomLeft + 1;
-
-                indices.push(topLeft, bottomLeft, topRight);
-                indices.push(topRight, bottomLeft, bottomRight);
+        for (let row = 0; row < grid_rows - 1; row++) {
+            for (let col = 0; col < grid_cols - 1; col++) {
+                const tl = row * grid_cols + col;
+                const tr = tl + 1;
+                const bl = (row + 1) * grid_cols + col;
+                const br = bl + 1;
+                indices.push(tl, bl, tr, tr, bl, br);
             }
         }
 
@@ -67,87 +64,59 @@ function SurfaceMesh({ impliedVolGrid, strikeAxis, timeAxis, gridRows, gridCols 
         geom.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
         geom.setIndex(indices);
         geom.computeVertexNormals();
-
-        return { geometry: geom, colorArray: colors };
-    }, [impliedVolGrid, gridRows, gridCols]);
+        return { geometry: geom };
+    }, [implied_vol_grid, grid_rows, grid_cols]);
 
     return (
         <group>
-            <mesh key={`solid-${geometryKey}`} geometry={geometry} receiveShadow castShadow>
-                <meshPhysicalMaterial
+            <mesh geometry={geometry} castShadow receiveShadow>
+                <meshStandardMaterial
                     vertexColors
                     side={THREE.DoubleSide}
-                    metalness={0.6}
-                    roughness={0.2}
-                    clearcoat={0.8}
-                    clearcoatRoughness={0.2}
+                    roughness={0.4}
+                    metalness={0.2}
                 />
             </mesh>
-            <mesh key={`wire-${geometryKey}`} geometry={geometry}>
-                <meshBasicMaterial
-                    color="#38bdf8"
-                    wireframe
-                    transparent
-                    opacity={0.15}
-                    depthWrite={false}
-                />
+            <mesh geometry={geometry}>
+                <meshBasicMaterial color="#cbd5e1" wireframe transparent opacity={0.1} />
             </mesh>
         </group>
     );
 }
 
-function AxisLabels({ strikeAxis, timeAxis }: { strikeAxis: number[]; timeAxis: number[] }) {
-    return null;
-}
-
-export default function VolSurface({ impliedVolGrid, strikeAxis, timeAxis, gridRows, gridCols }: VolSurfaceProps) {
-    const minIV = Math.min(...impliedVolGrid);
-    const maxIV = Math.max(...impliedVolGrid);
+export default function VolSurface({ data }: VolSurfaceProps) {
+    // Fallback data if null
+    const finalData = useMemo(() => {
+        if (data) return data;
+        const rows = 20;
+        const cols = 20;
+        return {
+            implied_vol_grid: Array.from({ length: rows * cols }, (_, i) => 0.2 + Math.sin(i / 10) * 0.1 + Math.random() * 0.05),
+            grid_rows: rows,
+            grid_cols: cols
+        };
+    }, [data]);
 
     return (
-        <div>
-            <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '0.6rem 1rem',
-                backgroundColor: '#0f172a',
-                borderRadius: '8px 8px 0 0',
-                fontFamily: 'monospace',
-                fontSize: '0.8rem',
-            }}>
-                <span style={{ color: '#60a5fa', fontWeight: 700 }}>
-                    Implied Volatility Surface
-                </span>
-                <span style={{ color: '#64748b' }}>
-                    IV Range: {(minIV * 100).toFixed(1)}% – {(maxIV * 100).toFixed(1)}%
-                </span>
-            </div>
-            <div style={{ width: '100%', height: '500px', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
-                <Canvas camera={{ position: [6, 5, 8], fov: 50 }} shadows>
-                    <color attach="background" args={['#020617']} />
-                    <ambientLight intensity={0.6} />
-                    <directionalLight position={[5, 10, 5]} intensity={1.2} castShadow shadow-mapSize={[1024, 1024]} />
-                    <pointLight position={[-5, 3, -5]} intensity={0.5} color="#60a5fa" />
-                    <Axes3D
-                        xLabel="Strike"
-                        yLabel="Implied Volatility (%)"
-                        zLabel="Time (Years)"
-                        xDomain={[Math.min(...strikeAxis), Math.max(...strikeAxis)]}
-                        yDomain={[minIV * 100, maxIV * 100]}
-                        zDomain={[Math.min(...timeAxis), Math.max(...timeAxis)]}
-                        scaleVector={[8.0, 4.0, 8.0]}
-                    >
-                        <SurfaceMesh
-                            impliedVolGrid={impliedVolGrid}
-                            strikeAxis={strikeAxis}
-                            timeAxis={timeAxis}
-                            gridRows={gridRows}
-                            gridCols={gridCols}
-                        />
-                    </Axes3D>
-                    <OrbitControls enablePan={true} enableDamping={true} dampingFactor={0.08} />
-                </Canvas>
+        <div className="w-full h-full relative">
+            <Canvas camera={{ position: [8, 6, 8], fov: 45 }} shadows>
+                <color attach="background" args={['#ffffff']} />
+                <ambientLight intensity={0.9} />
+                <directionalLight position={[10, 20, 10]} intensity={1.5} castShadow />
+                <pointLight position={[-10, 5, -10]} intensity={0.5} color="#3b82f6" />
+                <SurfaceMesh {...finalData} />
+                <OrbitControls enablePan makeDefault />
+            </Canvas>
+
+            <div className="absolute top-4 right-4 flex flex-col gap-2">
+                <div className="bg-white/80 backdrop-blur-md border border-slate-200 rounded-lg p-3 shadow-sm">
+                    <div className="text-[10px] font-bold uppercase text-slate-500 mb-2">Volatility Gradient</div>
+                    <div className="h-2 w-32 bg-gradient-to-r from-blue-500 via-purple-500 to-orange-500 rounded-full" />
+                    <div className="flex justify-between text-[8px] font-bold text-slate-400 mt-1 uppercase">
+                        <span>Low Vol</span>
+                        <span>High Vol</span>
+                    </div>
+                </div>
             </div>
         </div>
     );

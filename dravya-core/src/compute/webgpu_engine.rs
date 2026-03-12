@@ -208,7 +208,7 @@ fn cpu_fallback(
     let drift = (rate - 0.5 * vol * vol) * dt;
     let vol_sqrt_dt = vol * dt.sqrt();
 
-    let mut state = 12345u32;
+    let mut state = crate::get_global_seed() as u32;
     let mut rnd = || -> f64 {
         state = state.wrapping_mul(747796405).wrapping_add(2891336453);
         let word = ((state >> ((state >> 28) + 4)) ^ state).wrapping_mul(277803737);

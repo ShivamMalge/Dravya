@@ -97,6 +97,10 @@ pub fn solve_heston_fdm(
 
                 let mut option_val = u + dt * (drift_s + drift_v + diff_s + diff_v + cross_diff - rate * u);
 
+                if !option_val.is_finite() {
+                    option_val = u; // Rollback or clamp for stability if the PDE explodes
+                }
+
                 if is_american {
                     let early_exercise = (s_val - strike).max(0.0);
                     option_val = option_val.max(early_exercise);

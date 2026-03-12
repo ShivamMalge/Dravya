@@ -39,6 +39,12 @@ pub fn zeroCopyBufferView(values: &[f64]) -> arrowMemoryPointer {
 }
 
 #[wasm_bindgen]
+pub unsafe fn freeArrowMemory(ptr: arrowMemoryPointer) {
+    let _ = Box::from_raw(ptr.array_ptr as *mut FFI_ArrowArray);
+    let _ = Box::from_raw(ptr.schema_ptr as *mut FFI_ArrowSchema);
+}
+
+#[wasm_bindgen]
 pub fn loadParquetToMemory(data: &[u8]) -> usize {
     let bytes = Bytes::from(data.to_vec());
     let mut total_rows = 0;

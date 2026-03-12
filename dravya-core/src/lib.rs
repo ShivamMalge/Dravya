@@ -17,6 +17,33 @@ pub mod error;
 pub mod models;
 pub mod systems;
 
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static GLOBAL_PRNG_SEED: AtomicU64 = AtomicU64::new(123456789);
+const MODEL_VERSION: &str = "1.1.0-val1";
+
+#[wasm_bindgen]
+pub fn set_prng_seed(seed: u64) {
+    GLOBAL_PRNG_SEED.store(seed, Ordering::SeqCst);
+    let log_msg = format!("AUDIT_TRACE: Institutional PRNG Seed locked to: {}", seed);
+    web_sys::console::log_1(&log_msg.into());
+}
+
+#[wasm_bindgen]
+pub fn get_model_version() -> String {
+    MODEL_VERSION.to_string()
+}
+
+#[wasm_bindgen]
+pub fn valueBreakingVersionCheck() -> bool {
+    // Returns true if the current version is a value-breaking release (math changes)
+    MODEL_VERSION.contains("-val")
+}
+
+pub(crate) fn get_global_seed() -> u64 {
+    GLOBAL_PRNG_SEED.load(Ordering::SeqCst)
+}
+
 use crate::error::DravyaError;
 
 fn validate_input(arr: &[u8]) -> Result<(), DravyaError> {
@@ -567,9 +594,10 @@ pub async fn price_monte_carlo_gpu(
     spot: f64, strike: f64, time: f64, rate: f64, vol: f64,
     num_paths: u32, steps: u32, seed: f64
 ) -> Result<JsValue, JsValue> {
-    deterministicSeedLog(seed);
+    let active_seed = if seed != 0.0 { seed } else { get_global_seed() as f64 };
+    deterministicSeedLog(active_seed);
     
-    let result = compute::webgpu_engine::dispatch_pricing_kernel(spot, strike, time, rate, vol, num_paths, steps, seed)
+    let result = compute::webgpu_engine::dispatch_pricing_kernel(spot, strike, time, rate, vol, num_paths, steps, active_seed)
         .await
         .map_err(|e| JsValue::from_str(&e.to_string()))?;
         

@@ -8,6 +8,12 @@ license = "MIT"
 readme = "README.md"
 keywords = ["wasm", "algorithms", "quantitative-finance", "options-pricing", "webassembly"]
 categories = ["algorithms", "wasm", "finance"]
+exclude = [
+    "tests/**/*",
+    "../../dravya-web/**/*",
+    "../../dravya-server/**/*",
+    "../../dravya-test/**/*",
+]
 
 [lib]
 crate-type = ["cdylib", "rlib"]
@@ -37,3 +43,10 @@ console_error_panic_hook = "0.1"
 [dependencies.web-sys]
 version = "0.3"
 features = ["Window", "Performance", "console", "WebSocket", "MessageEvent", "ErrorEvent", "CloseEvent", "BinaryType", "Request", "RequestInit", "RequestMode", "Response"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

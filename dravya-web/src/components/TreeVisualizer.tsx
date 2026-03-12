@@ -4,13 +4,14 @@ import React, { useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { OrbitControls, QuadraticBezierLine, Html } from '@react-three/drei';
 import * as THREE from 'three';
-import Axes3D from './Axes3D';
 
 interface TreeVisualizerProps {
-    assetPrices: number[][];
-    optionValues: number[][];
-    finalPrice: number;
-    strikePrice: number;
+    treeData: {
+        asset_prices: number[][];
+        option_values: number[][];
+        final_price: number;
+        greeks: any;
+    } | null;
 }
 
 function TreeNode({ position, color, priceLabel, optionLabel }: {
@@ -19,49 +20,22 @@ function TreeNode({ position, color, priceLabel, optionLabel }: {
     priceLabel: string;
     optionLabel: string;
 }) {
-    const groupRef = useRef<THREE.Group>(null);
-    const randOffset = useMemo(() => Math.random() * Math.PI * 2, []);
-
-    useFrame((state) => {
-        if (groupRef.current) {
-            groupRef.current.position.y = position[1] + Math.sin(state.clock.elapsedTime * 2 + randOffset) * 0.05;
-        }
-    });
-
     return (
-        <group ref={groupRef} position={position}>
+        <group position={position}>
             <mesh>
-                <sphereGeometry args={[0.22, 32, 32]} />
-                <meshPhysicalMaterial
+                <sphereGeometry args={[0.18, 24, 24]} />
+                <meshStandardMaterial
                     color={color}
-                    transmission={0.4}
-                    thickness={0.5}
-                    roughness={0.1}
-                    metalness={0.8}
-                    clearcoat={1.0}
-                    emissive={color}
-                    emissiveIntensity={0.4}
+                    transparent
+                    opacity={0.8}
+                    roughness={0.2}
+                    metalness={0.1}
                 />
             </mesh>
-            <Html center distanceFactor={12} style={{ pointerEvents: 'none', zIndex: 10 }}>
-                <div style={{
-                    backgroundColor: 'rgba(15, 23, 42, 0.45)',
-                    backdropFilter: 'blur(6px)',
-                    border: `1px solid ${color}`,
-                    borderRadius: '6px',
-                    padding: '4px 8px',
-                    color: '#f8fafc',
-                    fontSize: '10px',
-                    fontFamily: 'monospace',
-                    fontWeight: 600,
-                    whiteSpace: 'nowrap',
-                    textAlign: 'center',
-                    transform: 'translateY(-30px)',
-                    boxShadow: `0 4px 12px ${color}40`,
-                    userSelect: 'none'
-                }}>
-                    <div>{priceLabel}</div>
-                    {optionLabel && <div style={{ color: '#cbd5e1', fontSize: '9px', fontWeight: 500, marginTop: '2px' }}>{optionLabel}</div>}
+            <Html center distanceFactor={10} style={{ pointerEvents: 'none' }}>
+                <div className="bg-white/90 backdrop-blur-sm border border-slate-200 rounded px-2 py-1 shadow-sm flex flex-col items-center gap-0.5 whitespace-nowrap -translate-y-8 select-none">
+                    <span className="text-[10px] font-bold text-slate-800 font-mono">{priceLabel}</span>
+                    {optionLabel && <span className="text-[8px] font-semibold text-slate-500 font-mono">{optionLabel}</span>}
                 </div>
             </Html>
         </group>
@@ -71,7 +45,7 @@ function TreeNode({ position, color, priceLabel, optionLabel }: {
 function TreeEdge({ start, end }: { start: [number, number, number]; end: [number, number, number] }) {
     const midPoint: [number, number, number] = [
         (start[0] + end[0]) / 2,
-        (start[1] + end[1]) / 2 + 0.5,
+        (start[1] + end[1]) / 2 + 0.3,
         (start[2] + end[2]) / 2
     ];
 
@@ -80,167 +54,100 @@ function TreeEdge({ start, end }: { start: [number, number, number]; end: [numbe
             start={start}
             end={end}
             mid={midPoint}
-            color="#475569"
-            lineWidth={1.5}
-            opacity={0.3}
+            color="#94a3b8"
+            lineWidth={1}
+            opacity={0.2}
             transparent
-            dashed={false}
         />
     );
 }
 
-function LatticeStructure({ assetPrices, optionValues, strikePrice }: {
-    assetPrices: number[][];
-    optionValues: number[][];
-    strikePrice: number;
-}) {
-    const { nodes, edges, bounds } = useMemo(() => {
-        const nodeElements: { position: [number, number, number]; color: string; priceLabel: string; optionLabel: string; key: string }[] = [];
-        const edgeElements: { start: [number, number, number]; end: [number, number, number]; key: string }[] = [];
+function LatticeStructure({ data }: { data: any }) {
+    const { nodes, edges } = useMemo(() => {
+        if (!data) return { nodes: [], edges: [] };
 
-        let minAsset = Infinity;
-        let maxAsset = -Infinity;
-        let maxOption = -Infinity;
+        const nodeElements: any[] = [];
+        const edgeElements: any[] = [];
+        const { asset_prices, option_values } = data;
 
-        for (const level of assetPrices) {
-            for (const val of level) {
-                if (val < minAsset) minAsset = val;
-                if (val > maxAsset) maxAsset = val;
-            }
-        }
-        for (const level of optionValues) {
-            for (const val of level) {
-                if (val > maxOption) maxOption = val;
-            }
-        }
-        const minOption = 0;
-        const optionRange = maxOption - minOption || 1;
+        const xSpacing = 2.5;
+        const ySpacing = 1.2;
+        const steps = asset_prices.length;
 
-        const xSpacing = 2.2;
-        const ySpacing = 1.3;
-        const totalSteps = assetPrices.length;
+        for (let step = 0; step < steps; step++) {
+            const levelCount = asset_prices[step].length;
+            for (let node = 0; node < levelCount; node++) {
+                const x = step * xSpacing - (steps - 1) * xSpacing / 2;
+                const y = (levelCount - 1) / 2 * ySpacing - node * ySpacing;
+                const price = asset_prices[step][node];
+                const opt = option_values[step]?.[node] ?? 0;
 
-        for (let step = 0; step < totalSteps; step++) {
-            const levelNodeCount = assetPrices[step].length;
-            for (let node = 0; node < levelNodeCount; node++) {
-                const xPos = step * xSpacing - (totalSteps - 1) * xSpacing / 2;
-                const yPos = (levelNodeCount - 1) / 2 * ySpacing - node * ySpacing;
-                const assetPrice = assetPrices[step][node];
-                const optionVal = optionValues[step]?.[node] ?? 0;
-
-                const zSpacing = 6.0;
-                const zPos = ((optionVal - minOption) / optionRange) * zSpacing - zSpacing / 2;
-                const position: [number, number, number] = [xPos, yPos, zPos];
-
-                const isInTheMoney = assetPrice > strikePrice;
-                const moneyness = Math.abs(assetPrice - strikePrice) / strikePrice;
-                const saturation = Math.min(moneyness * 3, 1);
-
-                let nodeColor: string;
-                if (isInTheMoney) {
-                    const g = Math.round(150 + saturation * 105);
-                    const r = Math.round(30 + (1 - saturation) * 50);
-                    const b = Math.round(200 + saturation * 55);
-                    nodeColor = `rgb(${r}, ${g}, ${b})`;
-                } else {
-                    const r = Math.round(200 + saturation * 55);
-                    const g = Math.round(40 + (1 - saturation) * 60);
-                    const b = Math.round(80 + (1 - saturation) * 40);
-                    nodeColor = `rgb(${r}, ${g}, ${b})`;
-                }
+                const pos: [number, number, number] = [x, y, 0];
+                const color = price > data.strike_price ? '#3b82f6' : '#94a3b8';
 
                 nodeElements.push({
-                    position,
-                    color: nodeColor,
-                    priceLabel: `$${assetPrice.toFixed(1)}`,
-                    optionLabel: optionVal > 0 ? `V=${optionVal.toFixed(2)}` : '',
-                    key: `node-${step}-${node}`,
+                    pos,
+                    color,
+                    price: `$${price.toFixed(1)}`,
+                    opt: opt > 0 ? `V=${opt.toFixed(2)}` : '',
+                    key: `node-${step}-${node}`
                 });
 
-                if (step < totalSteps - 1) {
-                    const nextLevelCount = assetPrices[step + 1].length;
-                    const nextXPos = (step + 1) * xSpacing - (totalSteps - 1) * xSpacing / 2;
+                if (step < steps - 1) {
+                    const nextX = (step + 1) * xSpacing - (steps - 1) * xSpacing / 2;
+                    const nextUpY = (asset_prices[step + 1].length - 1) / 2 * ySpacing - node * ySpacing;
+                    const nextDnY = (asset_prices[step + 1].length - 1) / 2 * ySpacing - (node + 1) * ySpacing;
 
-                    if (node < nextLevelCount) {
-                        const upYPos = (nextLevelCount - 1) / 2 * ySpacing - node * ySpacing;
-                        const nextUpOption = optionValues[step + 1]?.[node] ?? 0;
-                        const upZPos = ((nextUpOption - minOption) / optionRange) * zSpacing - zSpacing / 2;
-                        edgeElements.push({ start: position, end: [nextXPos, upYPos, upZPos], key: `edge-${step}-${node}-up` });
-                    }
-                    if (node + 1 < nextLevelCount) {
-                        const downYPos = (nextLevelCount - 1) / 2 * ySpacing - (node + 1) * ySpacing;
-                        const nextDownOption = optionValues[step + 1]?.[node + 1] ?? 0;
-                        const downZPos = ((nextDownOption - minOption) / optionRange) * zSpacing - zSpacing / 2;
-                        edgeElements.push({ start: position, end: [nextXPos, downYPos, downZPos], key: `edge-${step}-${node}-down` });
-                    }
+                    edgeElements.push({ start: pos, end: [nextX, nextUpY, 0], key: `edge-${step}-${node}-up` });
+                    edgeElements.push({ start: pos, end: [nextX, nextDnY, 0], key: `edge-${step}-${node}-dn` });
                 }
             }
         }
 
-        const xLength = (totalSteps - 1) * xSpacing || 1;
-        const yLength = (totalSteps - 1) * ySpacing || 1;
-        const zLength = 6.0;
-
-        return {
-            nodes: nodeElements,
-            edges: edgeElements,
-            bounds: { minAsset, maxAsset, minOption, maxOption, xLength, yLength, zLength, totalSteps }
-        };
-    }, [assetPrices, optionValues, strikePrice]);
+        return { nodes: nodeElements, edges: edgeElements };
+    }, [data]);
 
     return (
         <group>
-            <Axes3D
-                xLabel="Time Steps"
-                yLabel="Asset Price"
-                zLabel="Option Value"
-                xDomain={[0, bounds.totalSteps - 1]}
-                yDomain={[bounds.minAsset, bounds.maxAsset]}
-                zDomain={[bounds.minOption, bounds.maxOption]}
-                scaleVector={[bounds.xLength, bounds.yLength, bounds.zLength]}
-            >
-                {edges.map(({ start, end, key }) => (
-                    <TreeEdge key={key} start={start} end={end} />
-                ))}
-                {nodes.map(({ position, color, priceLabel, optionLabel, key }) => (
-                    <TreeNode key={key} position={position} color={color} priceLabel={priceLabel} optionLabel={optionLabel} />
-                ))}
-            </Axes3D>
+            {edges.map(e => <TreeEdge key={e.key} start={e.start} end={e.end} />)}
+            {nodes.map(n => <TreeNode key={n.key} position={n.pos} color={n.color} priceLabel={n.price} optionLabel={n.opt} />)}
         </group>
     );
 }
 
-export default function TreeVisualizer({ assetPrices, optionValues, finalPrice, strikePrice }: TreeVisualizerProps) {
-    return (
-        <div>
-            <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '0.6rem 1rem',
-                backgroundColor: '#0f172a',
-                borderRadius: '8px 8px 0 0',
-                fontFamily: 'monospace',
-                fontSize: '0.85rem',
-            }}>
-                <span style={{ color: '#10b981', fontWeight: 700 }}>
-                    Option Price: ${finalPrice.toFixed(4)}
-                </span>
-                <span style={{ color: '#64748b', fontSize: '0.75rem' }}>
-                    <span style={{ color: '#22c55e' }}>●</span> ITM &nbsp;
-                    <span style={{ color: '#ef4444' }}>●</span> OTM
-                </span>
+export default function TreeVisualizer({ treeData }: TreeVisualizerProps) {
+    if (!treeData) {
+        return (
+            <div className="w-full h-full flex items-center justify-center text-slate-400 bg-slate-50/50">
+                <div className="flex flex-col items-center gap-2">
+                    <span className="text-sm font-medium">No active lattice execution</span>
+                    <span className="text-xs">Adjust parameters and click Generate</span>
+                </div>
             </div>
-            <div style={{ width: '100%', height: '480px', borderRadius: '0 0 8px 8px', overflow: 'hidden' }}>
-                <Canvas camera={{ position: [20, 10, 20], fov: 50 }} shadows>
-                    <color attach="background" args={['#020617']} />
-                    <ambientLight intensity={0.6} />
-                    <directionalLight position={[10, 20, 10]} intensity={1.5} castShadow />
-                    <pointLight position={[-8, -5, -8]} intensity={0.8} color="#10b981" />
-                    <pointLight position={[0, 8, 5]} intensity={0.5} color="#3b82f6" />
-                    <LatticeStructure assetPrices={assetPrices} optionValues={optionValues} strikePrice={strikePrice} />
-                    <OrbitControls enablePan={true} enableDamping={true} dampingFactor={0.08} />
-                </Canvas>
+        );
+    }
+
+    return (
+        <div className="w-full h-full relative">
+            <Canvas camera={{ position: [0, 0, 15], fov: 40 }}>
+                <color attach="background" args={['#ffffff']} />
+                <ambientLight intensity={0.8} />
+                <pointLight position={[10, 10, 10]} intensity={1} />
+                <LatticeStructure data={treeData} />
+                <OrbitControls enablePan={true} makeDefault />
+            </Canvas>
+
+            <div className="absolute bottom-4 left-4 bg-white/80 backdrop-blur-sm border rounded-lg p-3 shadow-sm border-slate-200">
+                <div className="flex items-center gap-4 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                    <div className="flex items-center gap-1.5">
+                        <div className="w-2 h-2 rounded-full bg-blue-500" />
+                        <span>In The Money</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 border-l pl-4">
+                        <div className="w-2 h-2 rounded-full bg-slate-400" />
+                        <span>Out of Money</span>
+                    </div>
+                </div>
             </div>
         </div>
     );

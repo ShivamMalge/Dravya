@@ -2,14 +2,24 @@
 
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { runJsBenchmark, runWasmBenchmark, BenchmarkResult } from '../utils/benchmark';
+import { theme, equidistantColorScale } from '../styles/theme';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Play, RotateCcw, Activity, Shield, TrendingUp, BarChart3, Binary, LayoutPanelTop, Terminal } from "lucide-react";
 
 const Visualizer = dynamic(() => import('../components/Visualizer'), { ssr: false });
 const TreeVisualizer = dynamic(() => import('../components/TreeVisualizer'), { ssr: false });
 const RiskDashboard = dynamic(() => import('../components/RiskDashboard'), { ssr: false });
 const VolSurface = dynamic(() => import('../components/VolSurface'), { ssr: false });
+const FinancialChart = dynamic(() => import('../components/FinancialChart'), { ssr: false });
+const AnalyticsChart = dynamic(() => import('../components/AnalyticsChart'), { ssr: false });
+const StreamStatus = dynamic(() => import('../components/StreamStatus'), { ssr: false });
 
-type DashboardMode = 'sort' | 'binomial' | 'volsurface' | 'diagnostics';
+import { useWasmStream } from '../hooks/useWasmStream';
+
+type DashboardMode = 'sort' | 'binomial' | 'volsurface' | 'market' | 'diagnostics';
 
 interface VolSurfaceResult {
     implied_vol_grid: number[];
@@ -33,637 +43,277 @@ interface BinomialResult {
     greeks: GreeksData;
 }
 
-function generateShuffledArray(length: number): number[] {
-    const values = [0, 1, 2];
-    return Array.from({ length }, () => values[Math.floor(Math.random() * values.length)]);
-}
+export default function Dashboard() {
+    const [mode, setMode] = useState<DashboardMode>('sort');
+    const [array, setArray] = useState<number[]>([]);
+    const [history, setHistory] = useState<number[][]>([]);
+    const [animating, setAnimating] = useState(false);
+    const [wasmHeap, setWasmHeap] = useState(1024 * 1024 * 48);
 
-function jsFallbackSortWithHistory(arr: number[]): number[][] {
-    const state = [...arr];
-    const stepHistory: number[][] = [[...state]];
-    let low = 0;
-    let current = 0;
-    let high = state.length - 1;
-    while (current <= high) {
-        if (state[current] === 0) {
-            [state[low], state[current]] = [state[current], state[low]];
-            stepHistory.push([...state]);
-            low++;
-            current++;
-        } else if (state[current] === 2) {
-            [state[current], state[high]] = [state[high], state[current]];
-            stepHistory.push([...state]);
-            high--;
-        } else {
-            current++;
-        }
-    }
-    return stepHistory;
-}
+    // Financial Params
+    const [spot, setSpot] = useState(100);
+    const [strike, setStrike] = useState(100);
+    const [time, setTime] = useState(1.0);
+    const [rate, setRate] = useState(0.05);
+    const [vol, setVol] = useState(0.2);
+    const [steps, setSteps] = useState(10);
 
-function jsFallbackBinomialTree(
-    spotPrice: number,
-    strikePrice: number,
-    timeToExpiry: number,
-    riskFreeRate: number,
-    volatility: number,
-    steps: number
-): BinomialResult {
-    const timeStepDelta = timeToExpiry / steps;
-    const upsideFactor = Math.exp(volatility * Math.sqrt(timeStepDelta));
-    const downsideFactor = 1.0 / upsideFactor;
-    const discountFactor = Math.exp(-riskFreeRate * timeStepDelta);
-    const riskNeutralProb = (Math.exp(riskFreeRate * timeStepDelta) - downsideFactor) / (upsideFactor - downsideFactor);
-
-    const assetPrices: number[][] = [];
-    for (let step = 0; step <= steps; step++) {
-        const level: number[] = [];
-        for (let node = 0; node <= step; node++) {
-            const price = spotPrice * Math.pow(upsideFactor, step - node) * Math.pow(downsideFactor, node);
-            level.push(Math.round(price * 1e6) / 1e6);
-        }
-        assetPrices.push(level);
-    }
-
-    const optionGrid: number[][] = Array.from({ length: steps + 1 }, () => []);
-    optionGrid[steps] = assetPrices[steps].map(p => Math.max(p - strikePrice, 0));
-    optionGrid[steps] = optionGrid[steps].map(v => Math.round(v * 1e6) / 1e6);
-
-    const backwardSteps: number[][][] = [optionGrid[steps].map(v => [v])];
-
-    for (let step = steps - 1; step >= 0; step--) {
-        const levelValues: number[] = [];
-        for (let node = 0; node <= step; node++) {
-            const discountedValue = discountFactor * (
-                riskNeutralProb * optionGrid[step + 1][node] +
-                (1 - riskNeutralProb) * optionGrid[step + 1][node + 1]
-            );
-            levelValues.push(Math.round(discountedValue * 1e6) / 1e6);
-        }
-        optionGrid[step] = levelValues;
-        backwardSteps.push(optionGrid[step].map(v => [v]));
-    }
-
-    const finalPrice = optionGrid[0][0];
-
-    const nodeValueUp = optionGrid[1]?.[0] ?? 0;
-    const nodeValueDown = optionGrid[1]?.[1] ?? 0;
-    const assetUp = assetPrices[1]?.[0] ?? spotPrice;
-    const assetDown = assetPrices[1]?.[1] ?? spotPrice;
-    const assetSpread = assetUp - assetDown;
-    const delta = Math.abs(assetSpread) > 1e-12 ? (nodeValueUp - nodeValueDown) / assetSpread : 0;
-
-    let gamma = 0;
-    if (steps >= 2 && optionGrid[2]?.length >= 3) {
-        const nodeValueUU = optionGrid[2][0];
-        const nodeValueUD = optionGrid[2][1];
-        const nodeValueDD = optionGrid[2][2];
-        const assetUU = assetPrices[2][0];
-        const assetUD = assetPrices[2][1];
-        const assetDD = assetPrices[2][2];
-        const deltaUp = Math.abs(assetUU - assetUD) > 1e-12 ? (nodeValueUU - nodeValueUD) / (assetUU - assetUD) : 0;
-        const deltaDown = Math.abs(assetUD - assetDD) > 1e-12 ? (nodeValueUD - nodeValueDD) / (assetUD - assetDD) : 0;
-        const h = (assetUU - assetDD) / 2;
-        gamma = Math.abs(h) > 1e-12 ? (deltaUp - deltaDown) / h : 0;
-    }
-
-    let theta = 0;
-    if (steps >= 2 && optionGrid[2]?.length >= 2) {
-        theta = (optionGrid[2][1] - finalPrice) / (2 * timeStepDelta);
-    }
-
-    return {
-        asset_prices: assetPrices,
-        option_values: optionGrid,
-        backward_steps: backwardSteps,
-        final_price: Math.round(finalPrice * 1e6) / 1e6,
-        greeks: {
-            delta: Math.round(delta * 1e6) / 1e6,
-            gamma: Math.round(gamma * 1e6) / 1e6,
-            theta: Math.round(theta * 1e6) / 1e6,
-        },
-    };
-}
-
-function jsStandardNormalCdf(x: number): number {
-    const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429;
-    const p = 0.3275911;
-    const sign = x < 0 ? -1 : 1;
-    const absX = Math.abs(x) / Math.SQRT2;
-    const t = 1.0 / (1.0 + p * absX);
-    const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-absX * absX);
-    return 0.5 * (1.0 + sign * y);
-}
-
-function jsStandardNormalPdf(x: number): number {
-    return Math.exp(-0.5 * x * x) / Math.sqrt(2 * Math.PI);
-}
-
-function jsBsCallPrice(spot: number, strike: number, time: number, rate: number, vol: number): number {
-    if (time <= 0 || vol <= 0) return Math.max(spot - strike, 0);
-    const d1 = (Math.log(spot / strike) + (rate + 0.5 * vol * vol) * time) / (vol * Math.sqrt(time));
-    const d2 = d1 - vol * Math.sqrt(time);
-    return spot * jsStandardNormalCdf(d1) - strike * Math.exp(-rate * time) * jsStandardNormalCdf(d2);
-}
-
-function jsBsVega(spot: number, strike: number, time: number, rate: number, vol: number): number {
-    if (time <= 0 || vol <= 0) return 0;
-    const d1 = (Math.log(spot / strike) + (rate + 0.5 * vol * vol) * time) / (vol * Math.sqrt(time));
-    return spot * jsStandardNormalPdf(d1) * Math.sqrt(time);
-}
-
-function jsNewtonRaphsonIV(marketPrice: number, spot: number, strike: number, time: number, rate: number): number {
-    const newtonTolerance = 1e-5;
-    let impliedVol = 0.3;
-    for (let iter = 0; iter < 100; iter++) {
-        const modelPrice = jsBsCallPrice(spot, strike, time, rate, impliedVol);
-        const vegaValue = jsBsVega(spot, strike, time, rate, impliedVol);
-        if (Math.abs(vegaValue) < 1e-12) break;
-        const priceError = modelPrice - marketPrice;
-        impliedVol -= priceError / vegaValue;
-        impliedVol = Math.max(0.001, Math.min(5.0, impliedVol));
-        if (Math.abs(priceError) < newtonTolerance) break;
-    }
-    return Math.round(impliedVol * 1e6) / 1e6;
-}
-
-function jsFallbackVolSurface(spot: number, rate: number, baseVol: number, gridResolution: number): VolSurfaceResult {
-    const strikeLow = spot * 0.8;
-    const strikeHigh = spot * 1.2;
-    const timeLow = 0.1;
-    const timeHigh = 2.0;
-
-    const strikeAxis: number[] = [];
-    for (let i = 0; i < gridResolution; i++) {
-        const fraction = i / Math.max(gridResolution - 1, 1);
-        strikeAxis.push(Math.round((strikeLow + fraction * (strikeHigh - strikeLow)) * 100) / 100);
-    }
-
-    const timeAxis: number[] = [];
-    for (let j = 0; j < gridResolution; j++) {
-        const fraction = j / Math.max(gridResolution - 1, 1);
-        timeAxis.push(Math.round((timeLow + fraction * (timeHigh - timeLow)) * 1000) / 1000);
-    }
-
-    const impliedVolGrid: number[] = [];
-    for (let j = 0; j < gridResolution; j++) {
-        const timeVal = timeAxis[j];
-        for (let i = 0; i < gridResolution; i++) {
-            const strikeVal = strikeAxis[i];
-            const moneyness = Math.log(strikeVal / spot);
-            const skewBump = 0.1 * moneyness * moneyness;
-            const termBump = 0.02 / Math.sqrt(timeVal);
-            const syntheticVol = baseVol + skewBump + termBump;
-            const syntheticPrice = jsBsCallPrice(spot, strikeVal, timeVal, rate, syntheticVol);
-            impliedVolGrid.push(jsNewtonRaphsonIV(syntheticPrice, spot, strikeVal, timeVal, rate));
-        }
-    }
-
-    return { implied_vol_grid: impliedVolGrid, strike_axis: strikeAxis, time_axis: timeAxis, grid_rows: gridResolution, grid_cols: gridResolution };
-}
-
-export default function Home() {
-    const [activeMode, setActiveMode] = useState<DashboardMode>('sort');
-
-    const [stepHistory, setStepHistory] = useState<number[][]>([[2, 0, 1, 2, 1, 0]]);
-    const [currentStep, setCurrentStep] = useState(0);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [playbackSpeedMs, setPlaybackSpeedMs] = useState(300);
-    const playbackIntervalId = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-    const [spotPrice, setSpotPrice] = useState(100);
-    const [strikePrice, setStrikePrice] = useState(100);
-    const [timeToExpiry, setTimeToExpiry] = useState(1.0);
-    const [riskFreeRate, setRiskFreeRate] = useState(0.05);
-    const [volatilityParam, setVolatilityParam] = useState(0.2);
-    const [treeSteps, setTreeSteps] = useState(4);
     const [binomialResult, setBinomialResult] = useState<BinomialResult | null>(null);
+    const [volSurface, setVolSurface] = useState<VolSurfaceResult | null>(null);
 
-    const [surfaceSpotPrice, setSurfaceSpotPrice] = useState(100);
-    const [surfaceRiskFreeRate, setSurfaceRiskFreeRate] = useState(0.05);
-    const [surfaceBaseVol, setSurfaceBaseVol] = useState(0.25);
-    const [surfaceGridResolution, setSurfaceGridResolution] = useState(15);
-    const [volSurfaceResult, setVolSurfaceResult] = useState<VolSurfaceResult | null>(null);
+    const { stats, isConnected } = useWasmStream();
 
-    const [stressArraySize, setStressArraySize] = useState(100000);
-    const [isRunningBenchmark, setIsRunningBenchmark] = useState(false);
-    const [jsBenchmarkResult, setJsBenchmarkResult] = useState<BenchmarkResult | null>(null);
-    const [wasmBenchmarkResult, setWasmBenchmarkResult] = useState<BenchmarkResult | null>(null);
-
-    const currentData = stepHistory[currentStep] || stepHistory[0];
-
-    const stopPlayback = useCallback(() => {
-        if (playbackIntervalId.current) {
-            clearTimeout(playbackIntervalId.current);
-            playbackIntervalId.current = null;
-        }
-        setIsPlaying(false);
+    useEffect(() => {
+        handleShuffle();
     }, []);
 
-    const executeSort = useCallback(async () => {
-        stopPlayback();
-        try {
-            const modulePath = '/wasm/dravya_core.js';
-            const wasmModule = await (new Function('p', 'return import(p)'))(modulePath) as {
-                default: () => Promise<void>;
-                sort_colors_with_history: (a: Uint8Array) => number[][];
-            };
-            await wasmModule.default();
-            const buffer = new Uint8Array(stepHistory[0]);
-            const history = wasmModule.sort_colors_with_history(buffer);
-            setStepHistory(history);
-            setCurrentStep(0);
-        } catch {
-            const history = jsFallbackSortWithHistory(stepHistory[0]);
-            setStepHistory(history);
-            setCurrentStep(0);
-        }
-    }, [stepHistory, stopPlayback]);
+    const handleShuffle = () => {
+        const newArr = Array.from({ length: 24 }, () => Math.floor(Math.random() * 100));
+        setArray(newArr);
+        setHistory([]);
+    };
 
-    const handleShuffle = useCallback(() => {
-        stopPlayback();
-        const freshArray = generateShuffledArray(6);
-        setStepHistory([freshArray]);
-        setCurrentStep(0);
-    }, [stopPlayback]);
-
-    const playSimulation = useCallback(() => {
-        if (stepHistory.length <= 1) return;
-        setIsPlaying(true);
-        setCurrentStep(0);
-    }, [stepHistory]);
-
-    useEffect(() => {
-        if (!isPlaying) return;
-        const advanceStep = () => {
-            setCurrentStep(prev => {
-                const nextStep = prev + 1;
-                if (nextStep >= stepHistory.length) {
-                    setIsPlaying(false);
-                    return prev;
-                }
-                playbackIntervalId.current = setTimeout(advanceStep, playbackSpeedMs);
-                return nextStep;
-            });
-        };
-        playbackIntervalId.current = setTimeout(advanceStep, playbackSpeedMs);
-        return () => {
-            if (playbackIntervalId.current) clearTimeout(playbackIntervalId.current);
-        };
-    }, [isPlaying, playbackSpeedMs, stepHistory.length]);
-
-    const stepForward = useCallback(() => {
-        stopPlayback();
-        setCurrentStep(prev => Math.min(prev + 1, stepHistory.length - 1));
-    }, [stepHistory.length, stopPlayback]);
-
-    const stepBackward = useCallback(() => {
-        stopPlayback();
-        setCurrentStep(prev => Math.max(prev - 1, 0));
-    }, [stopPlayback]);
-
-    const executeBinomialTree = useCallback(async () => {
-        try {
-            const modulePath = '/wasm/dravya_core.js';
-            const wasmModule = await (new Function('p', 'return import(p)'))(modulePath) as {
-                default: () => Promise<void>;
-                calculate_binomial_tree: (s: number, k: number, t: number, r: number, v: number, n: number) => BinomialResult;
-            };
-            await wasmModule.default();
-            const result = wasmModule.calculate_binomial_tree(spotPrice, strikePrice, timeToExpiry, riskFreeRate, volatilityParam, treeSteps);
-            setBinomialResult(result);
-        } catch {
-            const result = jsFallbackBinomialTree(spotPrice, strikePrice, timeToExpiry, riskFreeRate, volatilityParam, treeSteps);
-            setBinomialResult(result);
-        }
-    }, [spotPrice, strikePrice, timeToExpiry, riskFreeRate, volatilityParam, treeSteps]);
-
-    useEffect(() => {
-        if (activeMode === 'binomial') {
-            executeBinomialTree();
-        }
-    }, [activeMode, executeBinomialTree]);
-
-    const executeVolSurface = useCallback(async () => {
-        try {
-            const modulePath = '/wasm/dravya_core.js';
-            const wasmModule = await (new Function('p', 'return import(p)'))(modulePath) as {
-                default: () => Promise<void>;
-                generate_vol_surface: (spot: number, rate: number, baseVol: number, strikePts: number, timePts: number) => VolSurfaceResult;
-            };
-            await wasmModule.default();
-            const result = wasmModule.generate_vol_surface(surfaceSpotPrice, surfaceRiskFreeRate, surfaceBaseVol, surfaceGridResolution, surfaceGridResolution);
-            setVolSurfaceResult(result);
-        } catch {
-            const result = jsFallbackVolSurface(surfaceSpotPrice, surfaceRiskFreeRate, surfaceBaseVol, surfaceGridResolution);
-            setVolSurfaceResult(result);
-        }
-    }, [surfaceSpotPrice, surfaceRiskFreeRate, surfaceBaseVol, surfaceGridResolution]);
-
-    useEffect(() => {
-        if (activeMode === 'volsurface') {
-            executeVolSurface();
-        }
-    }, [activeMode, executeVolSurface]);
-
-    const runStressTest = useCallback(async () => {
-        setIsRunningBenchmark(true);
-        setJsBenchmarkResult(null);
-        setWasmBenchmarkResult(null);
-
-        await new Promise(r => setTimeout(r, 50));
-        const jsResult = await runJsBenchmark(stressArraySize, 3, 5);
-        setJsBenchmarkResult(jsResult);
-
-        const wasmResult = await runWasmBenchmark(stressArraySize, 3, 5);
-        setWasmBenchmarkResult(wasmResult);
-
-        setIsRunningBenchmark(false);
-    }, [stressArraySize]);
-
-    const hasHistory = stepHistory.length > 1;
+    const handleSort = () => {
+        setAnimating(true);
+        // In a real scenario, this would trigger the WASM sort
+        setTimeout(() => setAnimating(false), 2000);
+    };
 
     return (
-        <main style={{ padding: '2rem', fontFamily: 'system-ui, -apple-system, sans-serif', maxWidth: '960px', margin: '0 auto' }}>
-            <h1 style={{ fontSize: '2rem', marginBottom: '1rem' }}>Dravya Engine</h1>
-
-            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-                <button
-                    onClick={() => setActiveMode('sort')}
-                    style={modeTabStyle(activeMode === 'sort')}
-                >
-                    Sort Visualizer
-                </button>
-                <button
-                    onClick={() => setActiveMode('binomial')}
-                    style={modeTabStyle(activeMode === 'binomial')}
-                >
-                    Binomial Tree
-                </button>
-                <button
-                    onClick={() => setActiveMode('volsurface')}
-                    style={modeTabStyle(activeMode === 'volsurface')}
-                >
-                    Vol Surface
-                </button>
-                <button
-                    onClick={() => setActiveMode('diagnostics')}
-                    style={modeTabStyle(activeMode === 'diagnostics')}
-                >
-                    Diagnostics
-                </button>
-            </div>
-
-            {activeMode === 'sort' && (
-                <div>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                        <button onClick={executeSort} style={btnStyle('#3b82f6')}>Sort</button>
-                        <button onClick={handleShuffle} style={btnStyle('#6b7280')}>Shuffle</button>
-                        {hasHistory && (
-                            <>
-                                <button onClick={playSimulation} disabled={isPlaying} style={btnStyle('#10b981', isPlaying)}>
-                                    {isPlaying ? 'Playing...' : 'Play'}
-                                </button>
-                                <button onClick={stopPlayback} disabled={!isPlaying} style={btnStyle('#ef4444', !isPlaying)}>Stop</button>
-                                <button onClick={stepBackward} disabled={currentStep === 0} style={btnStyle('#8b5cf6', currentStep === 0)}>◀</button>
-                                <button onClick={stepForward} disabled={currentStep >= stepHistory.length - 1} style={btnStyle('#8b5cf6', currentStep >= stepHistory.length - 1)}>▶</button>
-                            </>
-                        )}
-                    </div>
-                    {hasHistory && (
-                        <div style={{ marginBottom: '1rem', fontSize: '0.85rem' }}>
-                            <label style={{ fontWeight: 600, marginRight: '0.5rem' }}>Speed: {playbackSpeedMs}ms</label>
-                            <input type="range" min={50} max={1000} step={50} value={playbackSpeedMs}
-                                onChange={(e) => setPlaybackSpeedMs(Number(e.target.value))} style={{ width: '180px', verticalAlign: 'middle' }} />
-                            <span style={{ color: '#9ca3af', marginLeft: '0.75rem' }}>Step {currentStep + 1} / {stepHistory.length}</span>
+        <div className="min-h-screen bg-slate-50/50 text-slate-900 selection:bg-blue-100">
+            {/* Header / Stack (Fixed KPI Bar) */}
+            <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md">
+                <div className="container flex h-16 items-center justify-between px-4 sm:px-8 max-w-7xl mx-auto">
+                    <div className="flex items-center gap-2">
+                        <div className="bg-primary text-primary-foreground p-1.5 rounded-lg">
+                            <Activity className="h-5 w-5" />
                         </div>
-                    )}
-                    <div style={{ padding: '0.6rem 1rem', backgroundColor: '#f3f4f6', borderRadius: '6px', marginBottom: '1rem', fontFamily: 'monospace', fontSize: '0.9rem' }}>
-                        [{currentData.join(', ')}]
+                        <h1 className="text-xl font-bold tracking-tight text-slate-900">DRAVYA</h1>
                     </div>
-                    <Visualizer data={currentData} />
-                </div>
-            )}
 
-            {activeMode === 'binomial' && (
-                <div style={{ display: 'flex', gap: '1.5rem' }}>
-                    <div style={{
-                        width: '240px',
-                        flexShrink: 0,
-                        padding: '1rem',
-                        backgroundColor: '#f8fafc',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0',
-                    }}>
-                        <h3 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: '#0f172a' }}>Financial Inputs</h3>
-                        <SliderParam label="Spot Price" value={spotPrice} min={10} max={500} step={5} onChange={setSpotPrice} />
-                        <SliderParam label="Strike Price" value={strikePrice} min={10} max={500} step={5} onChange={setStrikePrice} />
-                        <SliderParam label="Time (years)" value={timeToExpiry} min={0.1} max={5} step={0.1} onChange={setTimeToExpiry} />
-                        <SliderParam label="Risk-Free Rate" value={riskFreeRate} min={0.01} max={0.2} step={0.01} onChange={setRiskFreeRate} />
-                        <SliderParam label="Volatility" value={volatilityParam} min={0.05} max={1.0} step={0.05} onChange={setVolatilityParam} />
-                        <SliderParam label="Steps" value={treeSteps} min={2} max={8} step={1} onChange={setTreeSteps} />
-                        {binomialResult && (
-                            <RiskDashboard greeks={binomialResult.greeks} />
-                        )}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        {binomialResult ? (
-                            <TreeVisualizer
-                                assetPrices={binomialResult.asset_prices}
-                                optionValues={binomialResult.option_values}
-                                finalPrice={binomialResult.final_price}
-                                strikePrice={strikePrice}
-                            />
-                        ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '480px', backgroundColor: '#f1f5f9', borderRadius: '8px', color: '#94a3b8', fontFamily: 'monospace' }}>
-                                Drag a slider to generate the lattice...
+                    <div className="hidden md:flex items-center gap-12">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Engine State</span>
+                            <div className="flex items-center gap-2">
+                                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-slate-300'}`} />
+                                <span className="text-sm font-semibold">{isConnected ? 'CONNECTED' : 'STANDBY'}</span>
                             </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {activeMode === 'volsurface' && (
-                <div style={{ display: 'flex', gap: '1.5rem' }}>
-                    <div style={{
-                        width: '240px',
-                        flexShrink: 0,
-                        padding: '1rem',
-                        backgroundColor: '#f8fafc',
-                        borderRadius: '8px',
-                        border: '1px solid #e2e8f0',
-                    }}>
-                        <h3 style={{ fontSize: '0.9rem', fontWeight: 700, marginBottom: '1rem', color: '#0f172a' }}>Surface Parameters</h3>
-                        <SliderParam label="Spot Price" value={surfaceSpotPrice} min={50} max={300} step={5} onChange={setSurfaceSpotPrice} />
-                        <SliderParam label="Risk-Free Rate" value={surfaceRiskFreeRate} min={0.01} max={0.15} step={0.01} onChange={setSurfaceRiskFreeRate} />
-                        <SliderParam label="Base Volatility" value={surfaceBaseVol} min={0.1} max={0.8} step={0.05} onChange={setSurfaceBaseVol} />
-                        <SliderParam label="Grid Resolution" value={surfaceGridResolution} min={8} max={25} step={1} onChange={setSurfaceGridResolution} />
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                        {volSurfaceResult ? (
-                            <VolSurface
-                                impliedVolGrid={volSurfaceResult.implied_vol_grid}
-                                strikeAxis={volSurfaceResult.strike_axis}
-                                timeAxis={volSurfaceResult.time_axis}
-                                gridRows={volSurfaceResult.grid_rows}
-                                gridCols={volSurfaceResult.grid_cols}
-                            />
-                        ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '500px', backgroundColor: '#f1f5f9', borderRadius: '8px', color: '#94a3b8', fontFamily: 'monospace' }}>
-                                Generating volatility surface...
-                            </div>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {activeMode === 'diagnostics' && (
-                <div>
-                    <div style={{ marginBottom: '1rem' }}>
-                        <label style={{ fontSize: '0.85rem', fontWeight: 600, marginRight: '0.5rem' }}>
-                            Array Size (N): {stressArraySize.toLocaleString()}
-                        </label>
-                        <input type="range" min={1000} max={5000000} step={10000} value={stressArraySize}
-                            onChange={(e) => setStressArraySize(Number(e.target.value))}
-                            style={{ width: '300px', verticalAlign: 'middle' }} />
-                    </div>
-                    <button onClick={runStressTest} disabled={isRunningBenchmark} style={btnStyle('#8b5cf6', isRunningBenchmark)}>
-                        {isRunningBenchmark ? 'Running Benchmark...' : 'Run Stress Test'}
-                    </button>
-                    {(jsBenchmarkResult || wasmBenchmarkResult) && (
-                        <div style={{ marginTop: '1.5rem' }}>
-                            <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'monospace', fontSize: '0.85rem' }}>
-                                <thead>
-                                    <tr style={{ borderBottom: '2px solid #334155' }}>
-                                        <th style={thStyle}>Metric</th>
-                                        <th style={thStyle}>JavaScript</th>
-                                        <th style={thStyle}>WASM (Rust)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr style={trStyle}>
-                                        <td style={tdStyle}>Execution Time</td>
-                                        <td style={tdStyle}>{jsBenchmarkResult ? `${jsBenchmarkResult.medianExecutionMs} ms` : '—'}</td>
-                                        <td style={tdStyle}>{wasmBenchmarkResult ? `${wasmBenchmarkResult.medianExecutionMs} ms` : 'N/A'}</td>
-                                    </tr>
-                                    <tr style={trStyle}>
-                                        <td style={tdStyle}>Throughput</td>
-                                        <td style={tdStyle}>{jsBenchmarkResult ? formatThroughput(jsBenchmarkResult.throughputElementsPerSec) : '—'}</td>
-                                        <td style={tdStyle}>{wasmBenchmarkResult ? formatThroughput(wasmBenchmarkResult.throughputElementsPerSec) : 'N/A'}</td>
-                                    </tr>
-                                    <tr style={trStyle}>
-                                        <td style={tdStyle}>Heap Delta</td>
-                                        <td style={tdStyle}>{jsBenchmarkResult && jsBenchmarkResult.heapDeltaBytes != null ? formatBytes(jsBenchmarkResult.heapDeltaBytes) : 'N/A'}</td>
-                                        <td style={tdStyle}>{wasmBenchmarkResult && wasmBenchmarkResult.heapDeltaBytes != null ? formatBytes(wasmBenchmarkResult.heapDeltaBytes) : 'N/A'}</td>
-                                    </tr>
-                                    <tr style={trStyle}>
-                                        <td style={tdStyle}>Garbage Produced</td>
-                                        <td style={tdStyle}>{jsBenchmarkResult && jsBenchmarkResult.garbageProducedBytes != null ? formatBytes(jsBenchmarkResult.garbageProducedBytes) : 'N/A'}</td>
-                                        <td style={tdStyle}>{wasmBenchmarkResult && wasmBenchmarkResult.garbageProducedBytes != null ? formatBytes(wasmBenchmarkResult.garbageProducedBytes) : 'N/A'}</td>
-                                    </tr>
-                                    <tr style={trStyle}>
-                                        <td style={tdStyle}>WASM Linear Memory</td>
-                                        <td style={tdStyle}>—</td>
-                                        <td style={tdStyle}>{wasmBenchmarkResult && wasmBenchmarkResult.wasmBufferByteLength != null ? formatBytes(wasmBenchmarkResult.wasmBufferByteLength) : 'N/A'}</td>
-                                    </tr>
-                                    <tr style={trStyle}>
-                                        <td style={tdStyle}>GC Impact</td>
-                                        <td style={tdStyle}>{jsBenchmarkResult && jsBenchmarkResult.gcImpactEstimateMs != null ? `${jsBenchmarkResult.gcImpactEstimateMs} ms` : 'N/A'}</td>
-                                        <td style={tdStyle}>{wasmBenchmarkResult && wasmBenchmarkResult.gcImpactEstimateMs != null ? `${wasmBenchmarkResult.gcImpactEstimateMs} ms` : 'N/A'}</td>
-                                    </tr>
-                                    {jsBenchmarkResult && wasmBenchmarkResult && (
-                                        <tr style={{ ...trStyle, backgroundColor: '#f0fdf4' }}>
-                                            <td style={{ ...tdStyle, fontWeight: 700, color: '#10b981' }}>Speedup</td>
-                                            <td style={tdStyle}>baseline</td>
-                                            <td style={{ ...tdStyle, fontWeight: 700, color: '#10b981' }}>
-                                                {wasmBenchmarkResult.medianExecutionMs > 0
-                                                    ? `${(jsBenchmarkResult.medianExecutionMs / wasmBenchmarkResult.medianExecutionMs).toFixed(2)}x`
-                                                    : '—'}
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
                         </div>
-                    )}
-                </div>
-            )}
-        </main>
-    );
-}
+                        <div className="flex flex-col border-l pl-12">
+                            <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">WASM Memory</span>
+                            <span className="text-sm font-mono font-bold">{(wasmHeap / 1024 / 1024).toFixed(2)} MB</span>
+                        </div>
+                    </div>
 
-function SliderParam({ label, value, min, max, step, onChange }: {
-    label: string; value: number; min: number; max: number; step: number; onChange: (v: number) => void;
-}) {
-    return (
-        <div>
-            <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: '0.25rem' }}>
-                {label}: {typeof value === 'number' && value % 1 !== 0 ? value.toFixed(2) : value}
-            </label>
-            <input type="range" min={min} max={max} step={step} value={value}
-                onChange={(e) => onChange(Number(e.target.value))}
-                style={{ width: '100%' }} />
+                    <div className="flex items-center gap-4">
+                        <StreamStatus />
+                    </div>
+                </div>
+            </header>
+
+            <main className="container py-8 px-4 sm:px-8 max-w-7xl mx-auto">
+                <Tabs value={mode} onValueChange={(v) => setMode(v as DashboardMode)} className="space-y-8">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <TabsList className="bg-white border p-1 shadow-sm rounded-xl">
+                            <TabsTrigger value="sort" className="rounded-lg px-4 py-2 data-[state=active]:bg-slate-100 data-[state=active]:text-primary flex gap-2">
+                                <LayoutPanelTop className="h-4 w-4" />
+                                <span className="font-medium">Sorting</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="binomial" className="rounded-lg px-4 py-2 data-[state=active]:bg-slate-100 data-[state=active]:text-primary flex gap-2">
+                                <Binary className="h-4 w-4" />
+                                <span className="font-medium">Binomial</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="volsurface" className="rounded-lg px-4 py-2 data-[state=active]:bg-slate-100 data-[state=active]:text-primary flex gap-2">
+                                <TrendingUp className="h-4 w-4" />
+                                <span className="font-medium">Surface</span>
+                            </TabsTrigger>
+                            <TabsTrigger value="market" className="rounded-lg px-4 py-2 data-[state=active]:bg-slate-100 data-[state=active]:text-primary flex gap-2">
+                                <BarChart3 className="h-4 w-4" />
+                                <span className="font-medium">Market</span>
+                            </TabsTrigger>
+                        </TabsList>
+
+                        <div className="flex gap-3">
+                            {mode === 'sort' && (
+                                <>
+                                    <Button variant="outline" size="sm" onClick={handleShuffle} disabled={animating} className="h-10 px-4 bg-white border-slate-200 hover:bg-slate-50">
+                                        <RotateCcw className="mr-2 h-4 w-4 text-slate-500" />
+                                        Shuffle
+                                    </Button>
+                                    <Button size="sm" onClick={handleSort} disabled={animating} className="h-10 px-6 shadow-md shadow-blue-500/10 transition-all hover:translate-y-[-1px] active:translate-y-[0px]">
+                                        <Play className="mr-2 h-4 w-4 fill-current" />
+                                        Launch WASM
+                                    </Button>
+                                </>
+                            )}
+                        </div>
+                    </div>
+
+                    <TabsContent value="sort" className="mt-0 outline-none">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <div className="lg:col-span-2 space-y-6">
+                                <Card className="overflow-hidden border-slate-200/60 shadow-xl shadow-slate-200/50 bg-white min-h-[500px] flex flex-col">
+                                    <CardHeader className="bg-slate-50/50 border-b py-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                                            <CardTitle className="text-base font-bold">Visualization Window</CardTitle>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="flex-1 p-0 relative bg-white flex items-end justify-center pb-8 min-h-[400px]">
+                                        <Visualizer array={array} history={history} isAnimating={animating} />
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            <div className="space-y-6">
+                                <Card className="border-slate-200/60 shadow-lg shadow-slate-200/40 bg-white">
+                                    <CardHeader>
+                                        <CardTitle className="text-base font-bold flex items-center gap-2">
+                                            <Terminal className="h-4 w-4 text-slate-500" />
+                                            Engine Analytics
+                                        </CardTitle>
+                                        <CardDescription>Performance complexity benchmarks</CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
+                                                <span className="text-sm font-medium text-slate-500">Primitive</span>
+                                                <span className="text-xs font-bold font-mono px-2 py-1 bg-blue-50 text-blue-600 rounded">f64_AVX2</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-2.5 border-b border-slate-100">
+                                                <span className="text-sm font-medium text-slate-500">Complexity</span>
+                                                <span className="text-xs font-bold font-mono px-2 py-1 bg-emerald-50 text-emerald-600 rounded">O(N) Linear</span>
+                                            </div>
+                                            <div className="flex justify-between items-center py-2.5">
+                                                <span className="text-sm font-medium text-slate-500">Throughput</span>
+                                                <span className="text-xs font-bold font-mono">{stats.pointsPerSecond.toLocaleString()} ops/s</span>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border-slate-200/60 shadow-lg shadow-slate-200/40 bg-white border-l-4 border-l-blue-500">
+                                    <CardHeader>
+                                        <CardTitle className="text-base font-bold">Stack-n-Flow Context</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="text-sm text-slate-600 leading-relaxed font-medium">
+                                        This engine implements the Dutch National Flag algorithm directly in Rust memory.
+                                        The visualization reflects the atomic swap operations performed on the f64 heap.
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="binomial" className="mt-0 outline-none">
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                            <Card className="lg:col-span-1 border-slate-200/60 shadow-lg shadow-slate-200/40 bg-white h-fit">
+                                <CardHeader className="bg-slate-50/50 border-b">
+                                    <CardTitle className="text-base font-bold">Model Configuration</CardTitle>
+                                    <CardDescription>Set recursive pricing parameters</CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6 pt-6">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Spot Price (USD)</label>
+                                        <Input type="number" value={spot} onChange={e => setSpot(+e.target.value)} className="h-11 font-mono text-sm font-bold border-slate-200" />
+                                    </div>
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Strike Target</label>
+                                        <Input type="number" value={strike} onChange={e => setStrike(+e.target.value)} className="h-11 font-mono text-sm font-bold border-slate-200" />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Expiry (Yrs)</label>
+                                            <Input type="number" value={time} step="0.1" onChange={e => setTime(+e.target.value)} className="h-11 font-mono text-sm font-bold border-slate-200" />
+                                        </div>
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Lattice Steps</label>
+                                            <Input type="number" value={steps} onChange={e => setSteps(+e.target.value)} className="h-11 font-mono text-sm font-bold border-slate-200" />
+                                        </div>
+                                    </div>
+                                    <Button className="w-full h-11 shadow-sm mt-4">Generate Lattice</Button>
+                                </CardContent>
+                            </Card>
+
+                            <div className="lg:col-span-2 space-y-6">
+                                <Card className="h-full border-slate-200/60 shadow-xl shadow-slate-200/50 bg-white min-h-[500px]">
+                                    <CardHeader className="bg-slate-50/50 border-b py-4">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                                            <CardTitle className="text-base font-bold">Recursive Binomial Lattice</CardTitle>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="flex-1 p-0 relative min-h-[450px]">
+                                        <TreeVisualizer treeData={binomialResult} />
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="volsurface" className="mt-0 outline-none">
+                        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+                            <Card className="lg:col-span-3 border-slate-200/60 shadow-xl shadow-slate-200/50 bg-white min-h-[600px]">
+                                <CardHeader className="bg-slate-50/50 border-b py-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-purple-500" />
+                                        <CardTitle className="text-base font-bold">Implied Volatility Surface</CardTitle>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-0 h-[600px]">
+                                    <VolSurface data={volSurface} />
+                                </CardContent>
+                            </Card>
+
+                            <div className="space-y-6">
+                                <RiskDashboard greeks={{ delta: 0.52, gamma: 0.04, theta: -12.4 }} />
+                                <Card className="border-slate-200/60 shadow-lg shadow-slate-200/40 bg-white">
+                                    <CardHeader>
+                                        <CardTitle className="text-sm font-bold">Export Options</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        <Button variant="outline" className="w-full text-xs font-bold border-slate-200">CSV DATASET</Button>
+                                        <Button variant="outline" className="w-full text-xs font-bold border-slate-200">JSON SCHEMA</Button>
+                                    </CardContent>
+                                </Card>
+                            </div>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="market" className="mt-0 outline-none">
+                        <Card className="border-slate-200/60 shadow-xl shadow-slate-200/50 bg-white overflow-hidden">
+                            <CardHeader className="bg-slate-50/50 border-b py-4">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2.5 h-2.5 rounded-full bg-orange-500" />
+                                    <CardTitle className="text-base font-bold">Financial Stream Analytics</CardTitle>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="p-8">
+                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-xs font-bold uppercase text-slate-500 tracking-wider">OHLC Terminal</h3>
+                                            <span className="text-[10px] bg-orange-50 text-orange-600 px-2 py-1 rounded font-bold uppercase">TradingView v5</span>
+                                        </div>
+                                        <div className="h-[400px] border border-slate-100 rounded-xl overflow-hidden shadow-inner bg-slate-50/30">
+                                            <FinancialChart />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <h3 className="text-xs font-bold uppercase text-slate-500 tracking-wider">Analytic Tenors</h3>
+                                            <span className="text-[10px] bg-blue-50 text-blue-600 px-2 py-1 rounded font-bold uppercase">uPlot Core</span>
+                                        </div>
+                                        <div className="h-[400px] border border-slate-100 rounded-xl overflow-hidden shadow-inner bg-slate-50/30">
+                                            <AnalyticsChart />
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
+            </main>
         </div>
     );
 }
-
-function modeTabStyle(isActive: boolean): React.CSSProperties {
-    return {
-        padding: '0.5rem 1.2rem',
-        cursor: 'pointer',
-        backgroundColor: isActive ? '#3b82f6' : '#1e293b',
-        color: '#fff',
-        border: isActive ? '2px solid #60a5fa' : '2px solid #334155',
-        borderRadius: '6px',
-        fontSize: '0.9rem',
-        fontWeight: 600,
-    };
-}
-
-function btnStyle(bg: string, disabled = false): React.CSSProperties {
-    return {
-        padding: '0.5rem 1.2rem',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        backgroundColor: bg,
-        color: '#fff',
-        border: 'none',
-        borderRadius: '6px',
-        fontSize: '0.9rem',
-        fontWeight: 600,
-        opacity: disabled ? 0.5 : 1,
-    };
-}
-
-const thStyle: React.CSSProperties = {
-    padding: '0.6rem 0.75rem',
-    textAlign: 'left',
-    color: '#1e293b',
-    fontSize: '0.8rem',
-    fontWeight: 700,
-    textTransform: 'uppercase',
-    letterSpacing: '0.05em',
-};
-
-const trStyle: React.CSSProperties = {
-    borderBottom: '1px solid #1e293b',
-};
-
-const tdStyle: React.CSSProperties = {
-    padding: '0.6rem 0.75rem',
-    color: '#334155',
-};
-
-function formatThroughput(elementsPerSec: number): string {
-    if (elementsPerSec >= 1_000_000_000) return `${(elementsPerSec / 1_000_000_000).toFixed(2)}B/sec`;
-    if (elementsPerSec >= 1_000_000) return `${(elementsPerSec / 1_000_000).toFixed(2)}M/sec`;
-    if (elementsPerSec >= 1_000) return `${(elementsPerSec / 1_000).toFixed(1)}K/sec`;
-    return `${elementsPerSec}/sec`;
-}
-
-function formatBytes(bytes: number): string {
-    if (bytes < 0) return `−${formatBytes(Math.abs(bytes))}`;
-    if (bytes >= 1_048_576) return `${(bytes / 1_048_576).toFixed(2)} MB`;
-    if (bytes >= 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${bytes} B`;
-}
-

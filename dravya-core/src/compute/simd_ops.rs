@@ -6,7 +6,7 @@ pub struct simdVectorRegister {
     pub data: f64x2,
 }
 
-#[doc = "Version 1.0.0. Non-portable: relies on wasm32-unknown-unknown architecture-specific SIMD rounding behavior."]
+#[doc = "Version 1.1.0-val1. Non-portable: relies on wasm32-unknown-unknown architecture-specific SIMD rounding and fast-math intrinsics."]
 #[inline(always)]
 pub fn fast_simd_pdf(x: f64x2) -> f64x2 {
     let half = f64x2::splat(-0.5);
